@@ -147,8 +147,8 @@ Create (all new; repo has no `src/` content today):
 2. **`tsconfig.json`** — `target ES2022`, `module preserve`, `moduleResolution bundler`, `strict`, `noUncheckedIndexedAccess`, `noImplicitOverride`, `verbatimModuleSyntax`, `noEmit`, `types: ["vite/client"]`, `include: ["src", "vite.config.ts", "scripts"]`, `allowJs` for `scripts/*.mjs`.
 3. **`biome.json`** — `formatter: { indentStyle: "space", indentWidth: 2, lineWidth: 100 }`, `linter.rules.recommended: true`, `javascript.formatter.quoteStyle: "single"`, `files.includes: ["**", "!dist", "!assets/raw", "!public/models"]`.
 4. **`vite.config.ts`** — `base: '/'`, `server.port: 5173`, `build.outDir: 'dist'`, `build.target: 'es2022'`, `build.manifest: true` (Phase 9's `scripts/assert-prod-split.mjs` reads `dist/.vite/manifest.json`). Add the Vitest block here (one config file, not two): `test: { environment: 'node', include: ['src/**/*.test.ts'] }`. `environment: 'node'` is correct — every test in this project is pure logic (state, layout math, data integrity); nothing needs a DOM. Revisit only if Phase 7 adds DOM tests.
-5. **`index.html`** — `<canvas id="scene">` with the `role="img"` + `aria-label` string from `docs/design-guidelines.md` §8, then `<div id="ui-root"></div>`, then `<script type="module" src="/src/main.ts">`. Font `<link>` per design-guidelines §2.
-6. **`src/style.css`** — paste the `:root` token block from design-guidelines §3 verbatim (single source of truth for UI colour; **do not** duplicate these into TS). Add: `html,body{margin:0;height:100%;overflow:hidden;background:var(--paper-200)}`, `#scene{position:fixed;inset:0;width:100%;height:100%;display:block;touch-action:none;z-index:var(--z-canvas)}`, `#ui-root{position:fixed;inset:0;pointer-events:none;z-index:var(--z-chrome)}`.
+5. **`index.html`** — `<canvas id="scene">` with the `role="img"` + `aria-label` string from `docs/design-guidelines.md` §8, then `<div id="gl-lost" hidden role="alert">Rendering paused — restoring…</div>` (R11's recoverable-message overlay), then `<div id="ui-root"></div>`, then `<script type="module" src="/src/main.ts">`. Font `<link>` per design-guidelines §2.
+6. **`src/style.css`** — paste the `:root` token block from design-guidelines §3 verbatim (single source of truth for UI colour; **do not** duplicate these into TS). Add: `html,body{margin:0;height:100%;overflow:hidden;background:var(--paper-200)}`, `#scene{position:fixed;inset:0;width:100%;height:100%;display:block;touch-action:none;z-index:var(--z-canvas)}`, `#ui-root{position:fixed;inset:0;pointer-events:none;z-index:var(--z-chrome)}`. Add `#gl-lost{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;background:var(--paper-200);color:var(--ink-900);z-index:var(--z-chrome);font:inherit}#gl-lost[hidden]{display:none}` — sits above the canvas, below nothing else needs to render while the GPU context is gone.
 7. **`src/config.ts`** — every tunable, typed `as const`:
    ```ts
    export const RENDER = { maxDpr: 2, antialias: true, shadowMapSize: 2048 } as const;
@@ -174,6 +174,18 @@ Create (all new; repo has no `src/` content today):
    renderer.shadowMap.type = THREE.PCFSoftShadowMap;     // renderer-level; only the key light casts
    ```
    Export `resize(w, h)` that calls `setPixelRatio` again — DPR changes when a window moves between displays.
+
+   **WebGL context loss (R11).** No phase owns this by default, and iOS Safari drops the WebGL context routinely on tab backgrounding — without `preventDefault()` the loss is permanent for the rest of the session (blank canvas, no error). Wire it in the same module:
+   ```ts
+   const lostCbs = new Set<() => void>();
+   const restoredCbs = new Set<() => void>();
+   canvas.addEventListener('webglcontextlost', (e) => {
+     e.preventDefault();                       // mandatory — without this the browser never restores the context
+     lostCbs.forEach((fn) => fn());
+   }, false);
+   canvas.addEventListener('webglcontextrestored', () => restoredCbs.forEach((fn) => fn()), false);
+   ```
+   Export `onContextLost(fn)` / `onContextRestored(fn)` alongside `resize`. `main.ts` wires: on loss → `loop.stop()` + reveal the `#gl-lost` overlay (index.html, step 5); on restore → hide the overlay + `loop.resume()`. No manual GPU-resource rebuild is needed here — three.js keeps CPU-side copies of every geometry/texture and re-uploads them lazily on the next `render()` call after restore; Phase 1's scene (a plane + 4 lights) and every later phase's shell/prop geometry follow the same lazy-reupload path, so this handler needs no per-phase update as the scene grows.
 9. **`src/core/scene-lighting.ts`** — `createScene()` returns a `Scene` with `background = new Color(palette sky #87CEEB)` and:
    - `HemisphereLight(hemiSky, hemiGround, 0.55)`
    - `DirectionalLight(0xfff2e0, 2.1)` at `(8, 12, 6)`, `castShadow = true`, ortho shadow camera framed to the lot (`left/right/top/bottom = ±10`, `near 1`, `far 40`), `shadow.mapSize 2048`, `shadow.bias -0.0005`, `shadow.normalBias 0.02`
@@ -181,9 +193,9 @@ Create (all new; repo has no `src/` content today):
    - `DirectionalLight(0xffffff, 0.35)` at `(-3, 4, -10)`, no shadow (rim)
    - temporary 20×20 `MeshStandardMaterial({color: 0x6B8E23, roughness: 1})` ground plane, `receiveShadow`, `name: 'temp-ground'` — **Phase 3 deletes it** and replaces it with the yard.
 10. **`src/core/camera-rig.ts`** — `CameraControls.install({ THREE })` at module scope, `PerspectiveCamera(CAMERA.fov, 1, near, far)`, apply `CONTROLS`, `controls.setLookAt(...CAMERA.start.pos, ...CAMERA.start.target, false)`. Export `{ camera, controls }`.
-11. **`src/core/loop.ts`** — `Clock`; each frame `const dt = Math.min(clock.getDelta(), 0.1)` (clamp so a backgrounded tab does not jump the damping), `controls.update(dt)`, `renderer.render(scene, camera)`. `ResizeObserver` on `document.body` → `renderer.resize` + `camera.aspect` + `updateProjectionMatrix`. Dev-only Stats per the R8 pattern. Return `stop()` for HMR disposal.
+11. **`src/core/loop.ts`** — `Clock`; each frame `const dt = Math.min(clock.getDelta(), 0.1)` (clamp so a backgrounded tab does not jump the damping), `controls.update(dt)`, `renderer.render(scene, camera)`. `ResizeObserver` on `document.body` → `renderer.resize` + `camera.aspect` + `updateProjectionMatrix`. Dev-only Stats per the R8 pattern. Return `{ stop(), resume() }`: `stop()` cancels the rAF handle (used for HMR disposal **and** by `renderer.onContextLost`); `resume()` calls `clock.getDelta()` once to discard the stale elapsed time (avoids a large `dt` jump on the first frame back) then restarts the rAF loop — used by `renderer.onContextRestored`.
 12. **`src/state/app-state.ts`** — implement the contract above over a private `EventTarget` + `CustomEvent<StateChange>`.
-13. **`src/main.ts`** — import `./style.css`, boot in order, `import.meta.hot?.dispose(() => stop())`; add stub `?edit=1` / `?stats=1` dynamic-import branches (no-op today; Phases 8/9 fill them in).
+13. **`src/main.ts`** — import `./style.css`, boot in order, `import.meta.hot?.dispose(() => loop.stop())`; add stub `?edit=1` / `?stats=1` dynamic-import branches (no-op today; Phases 8/9 fill them in). Wire R11: `const glLost = document.getElementById('gl-lost')!; renderer.onContextLost(() => { loop.stop(); glLost.hidden = false; }); renderer.onContextRestored(() => { glLost.hidden = true; loop.resume(); });`
 14. **`src/state/app-state.test.ts`** — assert: initial shape; `set` merges shallowly; a no-op `set` fires **no** event; `changed` lists only real diffs; `subscribe` returns a working unsubscribe.
 15. Run `npm run format && npm run lint && npm run typecheck && npm test && npm run build`.
 
@@ -199,6 +211,7 @@ Create (all new; repo has no `src/` content today):
 - [ ] `node -e "const s=require('fs').statSync('dist/assets/'+require('fs').readdirSync('dist/assets').find(f=>f.endsWith('.js')));"` — total `dist/assets/*.js` gzipped < 700 KB (`gzip -c dist/assets/*.js | wc -c`); three.js alone is ~600 KB gz, so this is the headroom check, not a stretch goal.
 - [ ] `src/data/types.ts` exports `FloorId` and nothing else.
 - [ ] Resizing the window (and dragging it to a 1x-DPR display) never distorts the render.
+- [ ] **SC-10 (R11):** `canvas.getContext('webgl2').getExtension('WEBGL_lose_context').loseContext()` → within one frame the render loop stops, `#gl-lost` is no longer `hidden`, and no uncaught error is thrown. Calling `.restoreContext()` on the same extension → `#gl-lost` becomes `hidden` again, the loop resumes, and the next frame renders without error or a visible pop/jump.
 
 ## Risk Assessment
 

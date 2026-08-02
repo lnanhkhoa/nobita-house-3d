@@ -40,9 +40,11 @@ A browser cannot test for `public/models/<id>.glb` without a HEAD request per pr
 // public/models/manifest.json — generated, committed
 { "version": 1,
   "assets": {
-    "prop-01": { "bytes": 41822, "tris": 1180, "srcHash": "9f2c…" }
+    "prop-01": { "bytes": 41822, "tris": 1180, "texBytes": 18300, "srcHash": "9f2c…" }
   } }
 ```
+
+`texBytes` folds in what would otherwise have been a separate `scripts/texture-budget.mjs` walker (cut as YAGNI — `plan.md` §Red-team rulings): `build-assets.mjs` already opens every GLB to count triangles, so summing the byte length of every `images[]`/`bufferViews[]` entry referenced by a texture is the same parse pass, not a second one. `resize --width 1024 --height 1024` in the pipeline already bounds the worst case; `texBytes` is only for the printed report and manifest, not a gate.
 
 Runtime: `fetch('models/manifest.json')` once → `Record<propId, AssetInfo>`. Missing file / bad JSON ⇒ `{}` ⇒ all proxies, `console.info` (never `error` — an assetless clone is a supported state). This is also what makes `loading.total` knowable before any GLB is fetched.
 
@@ -56,7 +58,7 @@ Runtime: `fetch('models/manifest.json')` once → `Record<propId, AssetInfo>`. M
 | `meshopt` | `--level medium\|high` (default `high`) + `--quantize-*` | `medium` chosen: `high` quantises normals harder, which shows on flat-shaded facets |
 | `inspect` | `--format pretty\|csv\|md` (default `pretty`) | **no JSON output** |
 
-`inspect` having no JSON mode kills the obvious stats path. Rather than parse CSV, the script reads triangle counts straight out of the GLB: parse the 12-byte header, read the JSON chunk, sum `Math.floor(accessor.count / 3)` over `meshes[].primitives[].indices` (fall back to `POSITION` count when non-indexed). ~30 lines, no dependency, exact, and still correct after meshopt compression because `accessor.count` survives in the JSON chunk.
+`inspect` having no JSON mode kills the obvious stats path. Rather than parse CSV, the script reads triangle **and texture** stats straight out of the GLB: parse the 12-byte header, read the JSON chunk, sum `Math.floor(accessor.count / 3)` over `meshes[].primitives[].indices` (fall back to `POSITION` count when non-indexed) for `tris`, and sum `bufferViews[i].byteLength` for every `bufferView` referenced by `images[].bufferView` for `texBytes`. One parse, two numbers. ~40 lines, no dependency, exact, and still correct after meshopt compression because `accessor.count` and `bufferViews` both survive in the JSON chunk.
 
 ### Pipeline
 
@@ -149,14 +151,14 @@ Props land visible, upright, inside their own room — never a heap at the origi
 
 ## Implementation Steps
 
-1. **`build-assets.mjs`** — `node:fs` + `node:crypto` + `node:child_process.execFileSync`. Resolve the CLI via `node_modules/.bin/gltf-transform` (not bare `gltf-transform`, which relies on PATH). Steps: read existing manifest → glob `assets/raw/*.glb` → per file compute sha256 → skip if unchanged and output exists → run the 4 commands through `fs.mkdtempSync(os.tmpdir())` → write output → record `{bytes, tris, srcHash}` → write manifest sorted by key (stable diffs) → print table:
+1. **`build-assets.mjs`** — `node:fs` + `node:crypto` + `node:child_process.execFileSync`. Resolve the CLI via `node_modules/.bin/gltf-transform` (not bare `gltf-transform`, which relies on PATH). Steps: read existing manifest → glob `assets/raw/*.glb` → per file compute sha256 → skip if unchanged and output exists → run the 4 commands through `fs.mkdtempSync(os.tmpdir())` → write output → record `{bytes, tris, texBytes, srcHash}` → write manifest sorted by key (stable diffs) → print table:
    ```
-   prop-01  1.42 MB → 41.8 KB  (-97.1%)   18420 → 1180 tris
+   prop-01  1.42 MB → 41.8 KB  (-97.1%)   18420 → 1180 tris   17.9 KB tex
    prop-12  skipped (unchanged)
-   3 built · 12 skipped · 0 failed · public/models 612 KB
+   3 built · 12 skipped · 0 failed · public/models 612 KB (589 KB tex)
    ```
    A non-zero exit from any `gltf-transform` step ⇒ log the asset id + stderr, leave the previous output in place, continue, and exit 1 at the end. One bad download must not block 14 good ones.
-2. **`glbTriangleCount(path)`** — GLB header parse as described. Unit-test it against a known file once assets exist; until then guard with `try/catch → tris: null`.
+2. **`glbStats(path)`** — GLB header parse as described, returns `{ tris, texBytes }`. Unit-test it against a known file once assets exist; until then guard with `try/catch → { tris: null, texBytes: null }`.
 3. **`utils/dispose.ts`** — traverse, dispose geometries, skip shared materials (they belong to `world/materials.ts`), dispose textures owned by loaded GLBs.
 4. **Loader setup** (module scope, once):
    ```ts
@@ -172,7 +174,7 @@ Props land visible, upright, inside their own room — never a heap at the origi
 
 ## Success Criteria
 
-- [ ] **SC-1** `npm run assets:build` on ≥1 raw GLB prints per-asset before/after bytes + triangles and a totals line; output GLB is smaller and lower-poly than the input.
+- [ ] **SC-1** `npm run assets:build` on ≥1 raw GLB prints per-asset before/after bytes, triangles, **and texture bytes**, plus a totals line; output GLB is smaller and lower-poly than the input.
 - [ ] **SC-2** Running it twice in a row: second run prints `skipped (unchanged)` for every asset, exits 0, and `git status --porcelain public/models` is empty.
 - [ ] **SC-3** `node -e "JSON.parse(require('fs').readFileSync('public/models/manifest.json'))"` exits 0; keys are sorted; every key resolves to a `PropDef` id.
 - [ ] **SC-4** `npm run dev` with an **empty** `public/models/`: 63 proxy objects in the scene, DevTools Network shows **0** requests with status 404, console has 0 errors.
@@ -192,7 +194,7 @@ Props land visible, upright, inside their own room — never a heap at the origi
 | Rodin exports arrive uncentred / rotated / mis-scaled | **H×M** | The `AssetMeta` correction layer is mandatory from day 1, not retrofitted (`plan.md` risk). SC-7's warn tells the human the exact `scale` to type. Phase 8's editor shows the corrected transform live. | per-prop `asset` field |
 | Manifest and `public/models/` desync (hand-deleted GLB, stale manifest) | M×M | Registry treats a failed `loadAsync` as "proxy + warn", so a desync degrades instead of breaking. `--force` rebuilds from scratch. | `rm manifest.json && npm run assets:build -- --force` |
 | Inverted normals / non-manifold Rodin meshes (researcher report §2) | M×M | Out of scope for an automated fix — it needs Blender `Shift+N`. Detect cheaply: after load, if a mesh has `material.side === FrontSide` and looks hollow, the human sees it immediately in the scene. Document the Blender fix in the Phase 9 asset README. | `material.side = DoubleSide` per prop via `paletteOverride` path |
-| 63 individual prop meshes sit inside the renegotiated `<120` draw-call budget (32 shell + ~63 props ≈ 95) | L×L | Budget raised to `<120` by the lead (`plan.md` Reconciled contracts #4) — no longer at risk. `InstancedMesh` for repeated small props stays a **documented, unbuilt** Phase 9 escape hatch (preserves per-instance ids so raycast + editor keep working), triggered only if measured frame time misses the fps target, never by a draw-call count. | — |
+| 63 individual prop meshes sit inside the renegotiated `<120` draw-call budget (35 shell + ~63 props ≈ 98) | L×L | Budget raised to `<120` by the lead (`plan.md` Reconciled contracts #4) — no longer at risk. `InstancedMesh` for repeated small props stays a **documented, unbuilt** Phase 9 escape hatch (preserves per-instance ids so raycast + editor keep working), triggered only if measured frame time misses the fps target, never by a draw-call count. | — |
 | `.clone(true)` on a meshopt-decoded GLTF shares geometry but also shares materials that a later `paletteOverride` would mutate globally | M×M | Clone then, if `paletteOverride` is set, assign a fresh shared palette material (not a mutated clone). Never mutate a loaded material in place. | — |
 | Loading many GLBs in parallel stalls the first paint on mobile | M×L | Sequential `for await` with `onProgress`; the loading veil (Phase 7) covers it. Batch-parallelism is a Phase 9 tuning knob. | `Promise.all` in chunks of 4 |
 | `public/layout.json` committed with editor-mode noise (huge floats) | L×L | Phase 8's exporter rounds to 3 decimals; noted here so both phases agree. | — |
