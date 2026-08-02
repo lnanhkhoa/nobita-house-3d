@@ -1,0 +1,501 @@
+<!DOCTYPE html>
+<html lang="en" class="wf">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Nobita's House 3D — Desktop UI wireframe</title>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght,SOFT,WONK@9..144,400..700,100,1&family=Hanken+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+/* ============================================================
+   DESIGN TOKENS — mirror of docs/design-guidelines.md §3
+   ============================================================ */
+:root{
+  --paper-100:#FFFCF6; --paper-200:#F7F1E6; --paper-300:#EDE4D4; --paper-400:#E0D3BC;
+  --ink-900:#2A241E; --ink-700:#4E453B; --ink-500:#6F6355;
+  --line:#DBCEB9; --line-strong:#C7B69B;
+  --accent-700:#084A96; --accent-600:#0B63C5; --accent-400:#4FA8F7;
+  --accent-soft:rgba(11,99,197,.10); --scrim:rgba(42,36,30,.46); --halo:#fff;
+  --dev-bg:#14181D; --dev-surface:#1E242C; --dev-line:#2E3742;
+  --dev-text:#D7DEE6; --dev-muted:#8794A3; --dev-accent:#FFB020;
+  --panel-bg:rgba(247,241,230,.92); --panel-blur:saturate(1.1) blur(10px);
+  --sh-1:0 1px 2px rgba(42,36,30,.10),0 2px 8px rgba(42,36,30,.08);
+  --sh-2:0 2px 6px rgba(42,36,30,.12),0 14px 30px rgba(42,36,30,.18);
+  --sh-pin:0 2px 5px rgba(42,36,30,.38);
+  --r-sm:6px; --r-md:10px; --r-lg:14px; --r-pill:999px;
+  --s1:4px; --s2:8px; --s3:12px; --s4:16px; --s5:24px; --s6:32px;
+  --font-display:'Fraunces',Georgia,serif;
+  --font-ui:'Hanken Grotesk',system-ui,-apple-system,sans-serif;
+  --font-mono:ui-monospace,SFMono-Regular,Menlo,monospace;
+  --font-jp:'Hiragino Kaku Gothic ProN','Yu Gothic','Noto Sans JP',sans-serif;
+  --e-out:cubic-bezier(.22,1,.36,1); --e-in:cubic-bezier(.4,0,1,1); --e-soft:cubic-bezier(.4,0,.2,1);
+  --d-hover:120ms; --d-press:90ms; --d-panel-in:280ms; --d-panel-out:180ms;
+  --d-sheet-in:320ms; --d-veil-out:500ms; --d-fly:900ms;
+  --z-canvas:0; --z-pins:10; --z-chrome:20; --z-panel:30; --z-scrim:40;
+  --z-sheet:50; --z-skip:100; --z-editor:1000; --z-veil:9000; --z-live:9500;
+}
+*,*::before,*::after{box-sizing:border-box}
+body{margin:0;font-family:var(--font-ui);background:#efe9df;color:var(--ink-900);-webkit-font-smoothing:antialiased}
+
+/* ---------- deliverable scaffolding (NOT part of the product) ---------- */
+.doc{max-width:1440px;margin:0 auto;padding:40px 24px 96px}
+.doc-head{border-bottom:2px solid var(--line-strong);padding-bottom:20px;margin-bottom:40px}
+.doc-head h1{font-family:var(--font-display);font-variation-settings:'SOFT'100,'WONK'1;font-weight:600;font-size:32px;margin:0 0 6px}
+.doc-head p{margin:0;color:var(--ink-700);font-size:14px;max-width:76ch;line-height:1.6}
+.ann{display:flex;align-items:baseline;gap:12px;margin:48px 0 14px;font-size:12px;letter-spacing:.09em;text-transform:uppercase;font-weight:600;color:var(--ink-500)}
+.ann b{font-family:var(--font-display);font-size:18px;letter-spacing:0;text-transform:none;color:var(--ink-900);font-weight:600}
+.frame{position:relative;height:820px;min-width:1120px;border:1px solid var(--line-strong);border-radius:10px;overflow:hidden;background:#000;box-shadow:0 18px 44px rgba(42,36,30,.16)}
+.note{margin:12px 0 0;font-size:13px;line-height:1.65;color:var(--ink-700);max-width:100ch}
+.note code{font-family:var(--font-mono);font-size:12px;background:var(--paper-300);padding:1px 5px;border-radius:4px}
+.note b{color:var(--ink-900)}
+
+/* ============================================================
+   LAYER 0 — canvas placeholder
+   Real product: <canvas role="img" aria-label="...">, touch-action:none
+   ============================================================ */
+.canvas{position:absolute;inset:0;z-index:var(--z-canvas);background:linear-gradient(180deg,#87CEEB 0%,#B7E2F2 46%,#D9EEF3 100%);overflow:hidden}
+.canvas .scene{position:absolute;left:50%;top:52%;transform:translate(-50%,-50%);width:min(96%,1180px)}
+.canvas-tag{position:absolute;right:14px;bottom:12px;font:600 10px/1 var(--font-mono);letter-spacing:.14em;color:rgba(42,36,30,.4)}
+
+/* ============================================================
+   LAYER 10+ — UI ROOT. Everything transparent → pointer-events:none.
+   Only leaves listed below re-enable pointers.
+   ============================================================ */
+.ui-root{position:absolute;inset:0;pointer-events:none;font-size:14px}
+.ui-root > *{pointer-events:auto}          /* opt-in per surface */
+.pin-layer{pointer-events:none !important} /* container stays transparent to orbit */
+
+/* --- shared paper surface --- */
+.paper{background:var(--panel-bg);-webkit-backdrop-filter:var(--panel-blur);backdrop-filter:var(--panel-blur);
+  border:1px solid var(--line);border-radius:var(--r-lg);box-shadow:var(--sh-2)}
+.micro{font-size:11px;line-height:1.3;letter-spacing:.09em;text-transform:uppercase;font-weight:600;color:var(--ink-500)}
+
+/* --- focus ring: white halo makes it survive over the canvas --- */
+.ui-root button:focus-visible,.ui-root a:focus-visible,.ui-root input:focus-visible{
+  outline:2px solid var(--accent-600);outline-offset:2px;box-shadow:0 0 0 4px var(--halo)}
+.is-focus{outline:2px solid var(--accent-600);outline-offset:2px;box-shadow:0 0 0 4px var(--halo)}
+/* pins are a 44px transparent hit box around a 26px disc → ring must hug the disc, not the box */
+.pin:focus-visible,.pin.is-focus{outline:none;box-shadow:none}
+.pin:focus-visible .pin__disc,.pin.is-focus .pin__disc{
+  box-shadow:0 0 0 2px var(--halo),0 0 0 4px var(--accent-600),0 0 0 6.5px var(--halo),var(--sh-pin)}
+
+/* ============================================================
+   BRAND + RAIL (left column, z 20)
+   ============================================================ */
+.leftcol{position:absolute;left:16px;top:16px;width:232px;display:flex;flex-direction:column;gap:12px;z-index:var(--z-chrome)}
+.brand{padding:12px 14px}
+.brand h1{margin:0;font-family:var(--font-display);font-variation-settings:'SOFT'100,'WONK'1;font-weight:600;font-size:20px;line-height:1.15;color:var(--ink-900)}
+.brand p{margin:3px 0 0;font-size:11px;letter-spacing:.08em;text-transform:uppercase;font-weight:600;color:var(--ink-500)}
+
+.rail{padding:12px 12px 10px;max-height:560px;overflow:auto;overscroll-behavior:contain}
+.rail__group + .rail__group{margin-top:14px}
+.rail__head{display:flex;align-items:baseline;justify-content:space-between;padding:0 4px 6px}
+.rail__head h2{margin:0;font-family:var(--font-display);font-variation-settings:'SOFT'100,'WONK'1;font-weight:600;font-size:15px;line-height:1.3}
+.rail__head span{font-size:10px;letter-spacing:.08em;text-transform:uppercase;font-weight:600;color:var(--ink-500)}
+.rail__list{list-style:none;margin:0;padding:0 0 0 10px;border-left:2px solid var(--line-strong)} /* bracket = structural grouping */
+.room{display:flex;align-items:center;gap:8px;width:100%;min-height:36px;padding:5px 8px 5px 9px;margin:0 0 1px;
+  border:0;border-radius:var(--r-sm);background:transparent;text-align:left;cursor:pointer;color:var(--ink-700);
+  font-family:inherit;font-size:13px;font-weight:500;position:relative;white-space:nowrap;overflow:hidden;
+  transition:background var(--d-hover) var(--e-soft),color var(--d-hover) var(--e-soft)}
+.room:hover{background:var(--paper-300);color:var(--ink-900)}
+.room__jp{font-family:var(--font-jp);font-size:9.5px;font-style:normal;opacity:.5;margin-left:auto;flex:none;letter-spacing:.02em;white-space:nowrap}
+.room[aria-current="true"]{background:var(--accent-soft);color:var(--accent-600);font-weight:600}
+.room[aria-current="true"]::before{content:"";position:absolute;left:-11px;top:6px;bottom:6px;width:3px;border-radius:2px;background:var(--accent-600)}
+.room--all{margin-bottom:10px;padding-left:9px;border-bottom:1px dashed var(--line);border-radius:var(--r-sm) var(--r-sm) 0 0;padding-bottom:9px}
+
+/* ============================================================
+   VIEW CONTROLS (top-right, z 20)
+   ============================================================ */
+.controls{position:absolute;right:16px;top:16px;width:392px;padding:10px 12px 12px;display:flex;gap:12px;align-items:stretch;z-index:var(--z-chrome)}
+.cgroup{display:flex;flex-direction:column;gap:6px}
+.cgroup > .micro{padding-left:2px}
+.cgroup__row{display:flex;gap:4px}
+.cgroup + .cgroup{padding-left:12px;border-left:1px solid var(--line)}
+.tgl{width:66px;min-height:58px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px;
+  padding:6px 3px;border:0;border-radius:var(--r-md);background:transparent;color:var(--ink-700);cursor:pointer;
+  font-family:inherit;font-size:11px;font-weight:500;line-height:1.15;text-align:center;position:relative;
+  transition:background var(--d-hover) var(--e-soft),color var(--d-hover) var(--e-soft),transform var(--d-press) var(--e-in)}
+.tgl svg{width:20px;height:20px;flex:none}
+.tgl__t{display:block;width:100%}
+.tgl:hover{background:var(--paper-300);color:var(--ink-900)}
+.tgl:active{background:var(--paper-400);transform:scale(.97)}
+.tgl[aria-pressed="true"]{background:var(--accent-soft);color:var(--accent-600);font-weight:700}
+.tgl[aria-pressed="true"]::before{content:"";position:absolute;left:4px;top:10px;bottom:10px;width:2px;border-radius:2px;background:var(--accent-600)}
+.tgl[disabled]{opacity:.45;cursor:not-allowed}
+.tgl--hover{background:var(--paper-300);color:var(--ink-900)}  /* static demo of :hover */
+
+/* ============================================================
+   HOTSPOT PINS (z 10). Container none, buttons auto, labels none.
+   ============================================================ */
+.pin-layer{position:absolute;inset:0;z-index:var(--z-pins)}
+.pin{position:absolute;width:44px;height:44px;margin:-22px 0 0 -22px;border:0;padding:0;background:none;cursor:pointer;
+  pointer-events:auto;display:grid;place-items:center;border-radius:var(--r-pill)}
+.pin__disc{width:26px;height:26px;border-radius:var(--r-pill);background:var(--paper-100);
+  border:2px solid var(--accent-600);box-shadow:0 0 0 1.5px var(--halo),var(--sh-pin);
+  display:grid;place-items:center;transition:transform var(--d-hover) var(--e-out),background var(--d-hover) var(--e-out)}
+.pin__disc::after{content:"";width:8px;height:8px;border-radius:var(--r-pill);background:var(--accent-600);transition:background var(--d-hover)}
+.pin__pulse{position:absolute;width:26px;height:26px;border-radius:var(--r-pill);border:1.5px solid var(--accent-400);
+  animation:pulse 2400ms var(--e-out) infinite}
+@keyframes pulse{0%{transform:scale(1);opacity:.55}70%{transform:scale(1.9);opacity:0}100%{transform:scale(1.9);opacity:0}}
+.pin:hover .pin__disc{transform:scale(1.12)}
+/* label chip: pointer-events NONE so it never blocks orbit */
+.pin__label{position:absolute;left:30px;top:50%;transform:translateY(-50%);pointer-events:none;white-space:nowrap;
+  background:var(--paper-100);color:var(--ink-900);border:1px solid var(--line);border-radius:var(--r-pill);
+  box-shadow:var(--sh-1);padding:5px 11px;font-size:12px;font-weight:600;opacity:0;transition:opacity var(--d-hover) var(--e-out)}
+.pin__label::before{content:"";position:absolute;left:-14px;top:50%;width:14px;border-top:1.5px dotted var(--line-strong)}
+.pin:hover .pin__label,.pin.is-shown .pin__label{opacity:1}
+.pin--flip .pin__label{left:auto;right:30px}
+.pin--flip .pin__label::before{left:auto;right:-14px}
+/* active */
+.pin--active .pin__disc{background:var(--accent-600);transform:scale(1.15)}
+.pin--active .pin__disc::after{background:#fff}
+.pin--active .pin__pulse{display:none}
+/* dimmed while a card is open — never dim a focused pin */
+.pin--dim{opacity:.3}
+.pin--dim:focus-visible,.pin--dim.is-focus{opacity:1}
+/* occluded: behind geometry — not tabbable, not clickable */
+.pin--occluded{pointer-events:none;opacity:.32}
+.pin--occluded .pin__disc{transform:scale(.8);border-color:var(--line-strong);box-shadow:none;background:var(--paper-200)}
+.pin--occluded .pin__disc::after{display:none}
+.pin--occluded .pin__pulse{display:none}
+
+/* ============================================================
+   INFO CARD (desktop side panel, z 30). No scrim → canvas still orbits.
+   ============================================================ */
+.card{position:absolute;right:16px;top:132px;width:392px;max-height:min(560px,calc(100% - 164px));
+  display:flex;flex-direction:column;padding:18px 20px 16px;z-index:var(--z-panel);
+  animation:cardIn var(--d-panel-in) var(--e-out) 240ms both}
+@keyframes cardIn{from{opacity:0;transform:translateX(24px)}to{opacity:1;transform:none}}
+.card__eyebrow{color:var(--accent-600);margin:0 0 6px}
+.card__title{margin:0 0 10px;font-family:var(--font-display);font-variation-settings:'SOFT'100,'WONK'1;
+  font-weight:600;font-size:24px;line-height:1.22;letter-spacing:-.01em;padding-right:40px}
+.card__body{margin:0;font-size:15px;line-height:1.62;color:var(--ink-700);overflow:auto;overscroll-behavior:contain}
+.card__meta{display:flex;gap:8px;align-items:center;margin-top:14px;padding-top:12px;border-top:1px dashed var(--line)}
+.card__meta .micro{color:var(--ink-500)}
+.card__dot{width:3px;height:3px;border-radius:50%;background:var(--line-strong)}
+.card__close{position:absolute;top:12px;right:12px;width:44px;height:44px;display:grid;place-items:center;
+  border:0;background:transparent;border-radius:var(--r-md);color:var(--ink-700);cursor:pointer;transition:background var(--d-hover)}
+.card__close:hover{background:var(--paper-300);color:var(--ink-900)}
+
+/* ============================================================
+   CREDITS (z 20) — line is pointer-events:none, only the link is clickable
+   ============================================================ */
+.credits{position:absolute;left:16px;bottom:14px;pointer-events:none !important;z-index:var(--z-chrome);
+  font-size:11px;letter-spacing:.04em;color:var(--ink-500);text-shadow:0 1px 0 rgba(255,252,246,.75)}
+.credits a{pointer-events:auto;color:inherit;text-decoration:none;border-bottom:1px dotted var(--line-strong)}
+.credits a:hover{color:var(--ink-900)}
+
+/* ============================================================
+   LOADING VEIL (z 9000) — blocks everything, removed from DOM on finish
+   ============================================================ */
+.veil{position:absolute;inset:0;z-index:var(--z-veil);display:grid;place-items:center;
+  background:radial-gradient(120% 100% at 50% 38%,#FFFCF6 0%,#F4EDE0 55%,#E5D9C3 100%)}
+.plate{position:relative;width:420px;padding:34px 34px 26px;background:var(--paper-100);border:1px solid var(--line);border-radius:var(--r-lg);box-shadow:var(--sh-2)}
+.plate::after{content:"";position:absolute;inset:7px;border:1.5px dashed var(--line-strong);border-radius:9px;pointer-events:none}
+.plate h1{margin:0;font-family:var(--font-display);font-variation-settings:'SOFT'100,'WONK'1;font-weight:600;font-size:34px;line-height:1.12;text-align:center}
+.plate .sub{margin:8px 0 26px;text-align:center;color:var(--ink-500)}
+.bar{height:3px;border-radius:2px;background:var(--paper-300);overflow:hidden}
+.bar i{display:block;height:100%;width:62%;background:var(--accent-600);border-radius:2px;transition:width 240ms var(--e-soft)}
+.plate .stat{display:flex;justify-content:space-between;margin-top:9px;font-family:var(--font-mono);font-size:12px;font-variant-numeric:tabular-nums;color:var(--ink-700)}
+.plate .attrib{margin:24px 0 0;text-align:center;font-size:10px;letter-spacing:.05em;color:var(--ink-500);line-height:1.5}
+
+/* ============================================================
+   EDITOR MODE (html[data-edit]) — z 1000, lil-gui sits at its own 1001
+   ============================================================ */
+.edit-ring{position:absolute;inset:0;border:3px solid var(--dev-accent);pointer-events:none;z-index:var(--z-editor)}
+.hazard{position:absolute;top:0;left:0;right:0;height:22px;z-index:var(--z-editor);display:flex;align-items:center;padding:0 10px;
+  font:700 10px/1 var(--font-mono);letter-spacing:.16em;color:var(--dev-bg);
+  background:repeating-linear-gradient(45deg,var(--dev-accent) 0 10px,#E39A12 10px 20px)}
+.editor{position:absolute;top:22px;right:0;bottom:0;width:300px;z-index:var(--z-editor);background:var(--dev-bg);
+  border-left:1px solid var(--dev-line);color:var(--dev-text);font-family:var(--font-mono);font-size:12px;display:flex;flex-direction:column}
+.editor h3{margin:0;padding:8px 10px;font:600 10px/1.4 var(--font-mono);letter-spacing:.14em;color:var(--dev-muted);
+  border-bottom:1px solid var(--dev-line);background:var(--dev-surface)}
+.editor input[type=search],.editor input[type=text]{width:100%;background:var(--dev-surface);border:1px solid var(--dev-line);
+  color:var(--dev-text);font-family:inherit;font-size:12px;padding:6px 8px;border-radius:0}
+.ed-search{padding:8px}
+.ed-list{flex:1;overflow:auto;border-top:1px solid var(--dev-line)}
+.ed-list .grp{padding:5px 10px;background:#10151A;color:var(--dev-muted);font-size:10px;letter-spacing:.12em;border-bottom:1px solid var(--dev-line)}
+.ed-row{display:flex;gap:8px;align-items:center;width:100%;height:26px;padding:0 10px;background:transparent;border:0;
+  color:var(--dev-text);font-family:inherit;font-size:12px;text-align:left;cursor:pointer;position:relative}
+.ed-row:hover{background:var(--dev-surface)}
+.ed-row span{color:var(--dev-muted)}
+.ed-row.is-sel{background:var(--dev-surface)}
+.ed-row.is-sel::before{content:"";position:absolute;left:0;top:0;bottom:0;width:3px;background:var(--dev-accent)}
+.ed-xform{border-top:1px solid var(--dev-line);padding:8px 10px 10px;background:#10151A}
+.xgrid{display:grid;grid-template-columns:32px repeat(3,1fr);gap:4px;align-items:center}
+.xgrid label{color:var(--dev-muted);font-size:10px;letter-spacing:.1em}
+.xgrid input{background:var(--dev-bg);border:1px solid var(--dev-line);color:var(--dev-text);font-family:inherit;font-size:11px;padding:3px 5px;width:100%;font-variant-numeric:tabular-nums}
+.ed-snap{display:flex;gap:0;border:1px solid var(--dev-line);margin-top:10px}
+.ed-snap button{flex:1;background:transparent;border:0;border-right:1px solid var(--dev-line);color:var(--dev-muted);
+  font-family:inherit;font-size:11px;padding:5px 0;cursor:pointer}
+.ed-snap button:last-child{border-right:0}
+.ed-snap button[aria-pressed=true]{background:var(--dev-accent);color:var(--dev-bg);font-weight:700}
+.ed-export{margin:10px;padding:10px;background:var(--dev-accent);color:var(--dev-bg);border:0;font-family:inherit;
+  font-weight:700;font-size:12px;letter-spacing:.06em;cursor:pointer}
+.lilgui{position:absolute;top:22px;right:300px;width:212px;z-index:1001;background:#1a1a1a;color:#ebebeb;
+  font-family:var(--font-mono);font-size:11px;border:1px solid #2c2c2c}
+.lilgui .t{padding:5px 8px;background:#111;color:#bbb;letter-spacing:.08em;font-size:10px}
+.lilgui .r{display:flex;justify-content:space-between;padding:4px 8px;border-top:1px solid #2c2c2c;color:#9a9a9a}
+.lilgui .r b{color:#e8c07d;font-weight:400}
+
+/* ============================================================
+   PIN STATE LEGEND (annotation only — never ships)
+   ============================================================ */
+.legend{display:flex;gap:10px;flex-wrap:wrap;margin-top:14px;padding:16px;border:1.5px dashed var(--line-strong);border-radius:10px;background:#f6f1e7}
+.legend > div{flex:1 1 160px;min-width:160px;background:var(--paper-200);border:1px solid var(--line);border-radius:8px;padding:14px 10px 10px;text-align:center;position:relative}
+.legend .swatch{height:56px;display:grid;place-items:center;position:relative;background:
+  linear-gradient(135deg,#A8C686 0 33%,#E8DCC8 33% 66%,#C85A3A 66% 100%);border-radius:6px;margin-bottom:9px}
+.legend .pin{position:static;margin:0}
+.legend h4{margin:0;font-size:12px;font-weight:700}
+.legend p{margin:3px 0 0;font-size:11px;line-height:1.4;color:var(--ink-500)}
+
+@media (prefers-reduced-motion:reduce){
+  *,*::before,*::after{animation-duration:1ms !important;animation-iteration-count:1 !important;transition-duration:1ms !important}
+  .pin__pulse{animation:none;transform:scale(1.25);opacity:.35}
+  .card{animation:none}
+}
+</style>
+</head>
+<body>
+
+<!-- reusable flat placeholder for the WebGL canvas (scene-palette colours so pin contrast is judgeable) -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true"><symbol id="diorama" viewBox="0 0 1200 800">
+  <ellipse cx="600" cy="700" rx="430" ry="70" fill="#4A4A4A" opacity=".18"/>
+  <!-- base plinth -->
+  <polygon points="140,430 600,695 600,735 140,470" fill="#5C4A3C"/>
+  <polygon points="600,695 1060,430 1060,470 600,735" fill="#4A3B2F"/>
+  <polygon points="600,165 1060,430 600,695 140,430" fill="#6B8E23"/>
+  <polygon points="600,165 1060,430 600,695" fill="#5E7F1E"/>
+  <!-- fence -->
+  <polyline points="140,430 600,165 1060,430" fill="none" stroke="#8B6F47" stroke-width="7" opacity=".9"/>
+  <polyline points="140,430 600,695 1060,430" fill="none" stroke="#8B6F47" stroke-width="5" opacity=".55"/>
+  <!-- shed -->
+  <polygon points="215,392 285,432 285,472 215,432" fill="#8B6F47"/>
+  <polygon points="285,432 350,394 350,434 285,472" fill="#6F573A"/>
+  <polygon points="215,392 285,354 350,394 285,432" fill="#C85A3A"/>
+  <!-- trees -->
+  <g><rect x="288" y="470" width="9" height="42" fill="#5C4A3C"/><circle cx="292" cy="456" r="40" fill="#6FA03C"/><path d="M292 416a40 40 0 0 1 0 80z" fill="#57812E"/></g>
+  <g><rect x="882" y="452" width="8" height="36" fill="#5C4A3C"/><circle cx="886" cy="440" r="32" fill="#6FA03C"/><path d="M886 408a32 32 0 0 1 0 64z" fill="#57812E"/></g>
+  <!-- house walls -->
+  <polygon points="370,380 620,524 620,374 370,230" fill="#E8DCC8"/>
+  <polygon points="620,524 870,380 870,230 620,374" fill="#D3C2A4"/>
+  <!-- tatami hint through open wall top -->
+  <polygon points="620,86 870,230 620,374 370,230" fill="#A8C686"/>
+  <polygon points="620,120 830,241 620,362 410,241" fill="#96B676" opacity=".7"/>
+  <!-- windows / door -->
+  <polygon points="424,282 470,309 470,349 424,322" fill="#9CC9DE" stroke="#8B6F47" stroke-width="3"/>
+  <polygon points="520,338 566,365 566,432 520,405" fill="#8B6F47"/>
+  <polygon points="700,352 748,325 748,381 700,408" fill="#9CC9DE" stroke="#8B6F47" stroke-width="3"/>
+  <polygon points="782,305 812,288 812,340 782,357" fill="#9CC9DE" stroke="#8B6F47" stroke-width="3"/>
+  <!-- roof -->
+  <polygon points="495,88 620,86 870,230 745,232" fill="#D0623F"/>
+  <polygon points="495,88 370,230 620,374 745,232" fill="#A9462C"/>
+  <polygon points="620,86 370,230 495,88" fill="#EFE4D0"/>
+  <polygon points="870,230 620,374 745,232" fill="#DED0B6"/>
+  <line x1="495" y1="88" x2="745" y2="232" stroke="#F2E8D5" stroke-width="6" stroke-linecap="round"/>
+  <!-- laundry pole -->
+  <rect x="420" y="452" width="6" height="70" fill="#8B6F47"/><rect x="520" y="436" width="6" height="70" fill="#8B6F47"/>
+  <line x1="423" y1="456" x2="523" y2="440" stroke="#EFE4D0" stroke-width="3"/>
+</symbol></svg>
+
+<div class="doc">
+<div class="doc-head">
+  <h1>Nobita's House 3D — Desktop UI chrome</h1>
+  <p>Static wireframe, no build step, no JS. Tokens are the exact copy-paste block from <code style="font-family:var(--font-mono);font-size:12px">docs/design-guidelines.md §3</code>. The canvas is faked with a flat SVG in the scene palette so pin/panel contrast can be judged honestly. Breakpoint shown: ≥1024px.</p>
+</div>
+
+<!-- =====================================================================
+     01 — LOADING
+     ===================================================================== -->
+<div class="ann"><b>01 — Loading veil</b> <span>z 9000 · blocks all pointer input</span></div>
+<div class="frame">
+  <div class="canvas"><svg class="scene" viewBox="0 0 1200 800"><use href="#diorama"/></svg></div>
+  <div class="veil">
+    <div class="plate">
+      <h1>Nobita's House</h1>
+      <p class="sub micro">A 3D dollhouse · Doraemon fan project</p>
+      <div class="bar" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="62" aria-label="Loading models"><i style="width:62%"></i></div>
+      <div class="stat"><span>40 / 65 models</span><span>62%</span></div>
+      <p class="attrib">Doraemon © Fujiko Pro / Shogakukan / TV Asahi<br>Fan project · non-commercial</p>
+    </div>
+  </div>
+</div>
+<p class="note"><b>Behaviour.</b> <code>&lt;body aria-busy="true"&gt;</code> while visible. Bar fill is the only saturated element. Holds 200 ms at 100 %, fades 500 ms, then the node is <b>removed from the DOM</b> (not just <code>opacity:0</code> — an invisible full-bleed layer would eat every orbit drag). Focus then moves to <code>&lt;h1&gt;</code> and <code>#sr-live</code> announces "Loaded, 65 of 65 models".</p>
+
+<!-- =====================================================================
+     02 — MAIN VIEW
+     ===================================================================== -->
+<div class="ann"><b>02 — Main view · hotspot active · info card open</b> <span>rail z20 · pins z10 · card z30</span></div>
+<div class="frame">
+  <div class="canvas">
+    <svg class="scene" viewBox="0 0 1200 800"><use href="#diorama"/></svg>
+    <span class="canvas-tag">[ WEBGL CANVAS — POINTER-EVENTS: AUTO · TOUCH-ACTION: NONE ]</span>
+  </div>
+
+  <div class="ui-root">
+
+    <!-- left column: brand + room navigator -->
+    <div class="leftcol">
+      <div class="brand paper">
+        <h1>Nobita's House</h1>
+        <p>3D Dollhouse</p>
+      </div>
+
+      <nav class="rail paper" aria-label="Rooms">
+        <button class="room room--all" type="button">Whole House</button>
+
+        <div class="rail__group">
+          <div class="rail__head"><h2>Second Floor</h2><span>4 rooms</span></div>
+          <ul class="rail__list">
+            <li><button class="room" type="button" aria-current="true">Nobita's Bedroom <em class="room__jp">のび太の部屋</em></button></li>
+            <li><button class="room" type="button">Parents' Bedroom <em class="room__jp">両親の部屋</em></button></li>
+            <li><button class="room" type="button">Hallway <em class="room__jp">廊下</em></button></li>
+            <li><button class="room" type="button">Stair Landing <em class="room__jp">踊り場</em></button></li>
+          </ul>
+        </div>
+
+        <div class="rail__group">
+          <div class="rail__head"><h2>Ground Floor</h2><span>7 rooms</span></div>
+          <ul class="rail__list">
+            <li><button class="room" type="button">Entrance Hall <em class="room__jp">玄関</em></button></li>
+            <li><button class="room" type="button">Living Room <em class="room__jp">居間</em></button></li>
+            <li><button class="room" type="button">Kitchen <em class="room__jp">台所</em></button></li>
+            <li><button class="room" type="button">Guest Room <em class="room__jp">客間</em></button></li>
+            <li><button class="room" type="button">Stair Hall <em class="room__jp">階段</em></button></li>
+            <li><button class="room" type="button">Bathroom <em class="room__jp">浴室</em></button></li>
+            <li><button class="room" type="button">Garden &amp; Shed <em class="room__jp">庭</em></button></li>
+          </ul>
+        </div>
+      </nav>
+    </div>
+
+    <!-- view controls -->
+    <div class="controls paper" role="group" aria-label="View controls">
+      <div class="cgroup">
+        <span class="micro">Structure</span>
+        <div class="cgroup__row">
+          <button class="tgl" type="button" aria-pressed="true">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11 12 4l9 7"/><path d="M5 11v9h14v-9"/></svg>
+            <span class="tgl__t">Roof</span></button>
+          <button class="tgl" type="button" aria-pressed="true">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3 21 8l-9 5-9-5 9-5Z"/><path d="m3 15 9 5 9-5"/></svg>
+            <span class="tgl__t">2nd Floor</span></button>
+          <button class="tgl tgl--hover" type="button" aria-pressed="false">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5h16v14H4z"/><path d="M12 5v14" stroke-dasharray="3 3"/><path d="M4 12h8"/></svg>
+            <span class="tgl__t">Cutaway</span></button>
+        </div>
+      </div>
+      <div class="cgroup">
+        <span class="micro">Camera</span>
+        <div class="cgroup__row">
+          <button class="tgl" type="button">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 3-6.7"/><path d="M3 4v5h5"/></svg>
+            <span class="tgl__t">Reset</span></button>
+          <button class="tgl" type="button" aria-pressed="false" aria-label="Auto-rotate">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><ellipse cx="12" cy="12" rx="9" ry="4"/><circle cx="12" cy="12" r="2.5"/></svg>
+            <span class="tgl__t">Rotate</span></button>
+        </div>
+      </div>
+    </div>
+
+    <!-- hotspot pins -->
+    <div class="pin-layer">
+      <button class="pin pin--active is-shown" type="button" style="left:47%;top:33%" aria-label="Nobita's study desk and time machine drawer">
+        <span class="pin__pulse"></span><span class="pin__disc"></span>
+        <span class="pin__label">The Legendary Desk &amp; Time Portal</span>
+      </button>
+      <button class="pin pin--dim" type="button" style="left:56%;top:29%" aria-label="Oshiire closet"><span class="pin__pulse"></span><span class="pin__disc"></span><span class="pin__label">Oshiire Closet</span></button>
+      <button class="pin pin--dim is-shown is-focus" type="button" style="left:38%;top:47%" aria-label="Kotatsu table"><span class="pin__pulse"></span><span class="pin__disc"></span><span class="pin__label">Kotatsu — Family Table</span></button>
+      <button class="pin pin--dim" type="button" style="left:52%;top:56%" aria-label="Genkan entrance"><span class="pin__pulse"></span><span class="pin__disc"></span><span class="pin__label">The Japanese Threshold</span></button>
+      <button class="pin pin--dim pin--flip" type="button" style="left:64%;top:44%" aria-label="Dorayaki"><span class="pin__pulse"></span><span class="pin__disc"></span><span class="pin__label">Doraemon's Favourite Snack</span></button>
+      <span class="pin pin--occluded" aria-hidden="true" style="left:44%;top:62%"><span class="pin__disc"></span></span>
+      <span class="pin pin--occluded" aria-hidden="true" style="left:59%;top:37%"><span class="pin__disc"></span></span>
+    </div>
+
+    <!-- info card -->
+    <div class="card paper" role="dialog" aria-modal="false" aria-labelledby="card-title">
+      <p class="card__eyebrow micro">Nobita's Bedroom</p>
+      <h2 class="card__title" id="card-title">The Legendary Desk &amp; Time Portal</h2>
+      <p class="card__body">This unassuming wooden school desk is home to Doraemon's most famous gadget — the Time Machine, hidden in the right-side drawer. It is the launching point for countless adventures across past and future. Nobita studies here, or tries to, while the portal connects straight to Doraemon's 22nd-century origin point.</p>
+      <div class="card__meta">
+        <span class="micro">prop-01</span><span class="card__dot"></span><span class="micro">2F · Nobita's Bedroom</span>
+      </div>
+      <button class="card__close" type="button" aria-label="Close">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6 6 18"/></svg>
+      </button>
+    </div>
+
+    <p class="credits">Doraemon © Fujiko Pro / Shogakukan / TV Asahi · <a href="#">fan project, non-commercial</a></p>
+  </div>
+</div>
+<p class="note"><b>Hit-testing.</b> <code>.ui-root</code> is <code>pointer-events:none</code>; only the rail, controls, card, pins and the credits link opt back in. <code>.pin-layer</code> stays <code>none</code> so the empty 90 % of it never steals an orbit drag; <code>.pin__label</code> is <code>none</code> too — a 260 px wide label with <code>auto</code> would carve a dead strip across the diorama. Occluded pins drop to <code>pointer-events:none</code> + <code>aria-hidden</code> + <code>tabindex="-1"</code>. <b>No scrim on desktop</b>, so the model is still orbitable while the card is open.<br>
+<b>Shown states.</b> Pin 1 active (accent fill, pulse off, label pinned) · pin 3 keyboard-focused (2 px accent ring + 4 px white halo) · pin 5 label flipped near the right edge · two occluded ghosts · Cutaway toggle in hover · Roof and 2nd Floor in <code>aria-pressed="true"</code>.</p>
+
+<div class="legend">
+  <div><div class="swatch"><span class="pin"><span class="pin__pulse"></span><span class="pin__disc"></span></span></div><h4>Idle</h4><p>26 px disc, 44 px hit box, staggered 2.4 s pulse</p></div>
+  <div><div class="swatch"><span class="pin"><span class="pin__disc" style="transform:scale(1.12)"></span></span></div><h4>Hover</h4><p>scale 1.12, label chip + dotted leader</p></div>
+  <div><div class="swatch"><span class="pin is-focus" style="border-radius:999px"><span class="pin__disc"></span></span></div><h4>Focused</h4><p>Tab reachable, halo ring, label forced on</p></div>
+  <div><div class="swatch"><span class="pin pin--active"><span class="pin__disc"></span></span></div><h4>Active</h4><p>accent fill, others dim to 30 %</p></div>
+  <div><div class="swatch"><span class="pin pin--occluded"><span class="pin__disc"></span></span></div><h4>Occluded</h4><p>ghost, not clickable, not tabbable</p></div>
+</div>
+<p class="note">Legend swatch background = tatami green / plaster cream / kawara red, the three hardest scene colours. The 1.5 px white halo ring is what keeps the pin readable on all three.</p>
+
+<!-- =====================================================================
+     03 — EDITOR MODE
+     ===================================================================== -->
+<div class="ann"><b>03 — Editor mode</b> <span>?edit=1 · dev only · z 1000 (lil-gui 1001)</span></div>
+<div class="frame">
+  <div class="canvas"><svg class="scene" viewBox="0 0 1200 800"><use href="#diorama"/></svg></div>
+  <div class="hazard">EDIT MODE — NOT PRODUCTION</div>
+  <div class="edit-ring"></div>
+
+  <aside class="editor" aria-label="Layout editor">
+    <h3>PROPS · 65</h3>
+    <div class="ed-search"><input type="search" placeholder="filter id or name…" value="desk"></div>
+    <div class="ed-list">
+      <div class="grp">2F-NOBITA</div>
+      <button class="ed-row is-sel" type="button"><span>prop-01</span> study desk</button>
+      <button class="ed-row" type="button"><span>prop-02</span> time machine</button>
+      <button class="ed-row" type="button"><span>prop-03</span> oshiire closet</button>
+      <button class="ed-row" type="button"><span>prop-04</span> futon</button>
+      <button class="ed-row" type="button"><span>prop-07</span> bookshelf</button>
+      <div class="grp">GF-LIVING</div>
+      <button class="ed-row" type="button"><span>prop-12</span> kotatsu table</button>
+      <button class="ed-row" type="button"><span>prop-16</span> tv set</button>
+      <button class="ed-row" type="button"><span>prop-18</span> shelf unit</button>
+      <div class="grp">GF-KITCHEN</div>
+      <button class="ed-row" type="button"><span>prop-21</span> counter</button>
+      <button class="ed-row" type="button"><span>prop-24</span> refrigerator</button>
+    </div>
+    <div class="ed-xform">
+      <div class="xgrid">
+        <label>POS</label><input value="2.140"><input value="3.000"><input value="-1.075">
+        <label>ROT</label><input value="0.000"><input value="90.00"><input value="0.000">
+        <label>SCL</label><input value="1.000"><input value="1.000"><input value="1.000">
+      </div>
+      <div class="ed-snap" role="group" aria-label="Snap">
+        <button type="button" aria-pressed="false">off</button>
+        <button type="button" aria-pressed="true">0.05</button>
+        <button type="button" aria-pressed="false">0.1</button>
+        <button type="button" aria-pressed="false">0.25</button>
+      </div>
+    </div>
+    <button class="ed-export" type="button">EXPORT layout.json</button>
+  </aside>
+
+  <div class="lilgui">
+    <div class="t">LIGHTING</div>
+    <div class="r">key intensity <b>1.85</b></div>
+    <div class="r">key azimuth <b>-38°</b></div>
+    <div class="r">hemi intensity <b>0.60</b></div>
+    <div class="r">shadow bias <b>-0.0004</b></div>
+    <div class="t" style="border-top:1px solid #2c2c2c">SCENE</div>
+    <div class="r">show proxies <b>true</b></div>
+    <div class="r">grid <b>true</b></div>
+  </div>
+</div>
+<p class="note"><b>Never confusable with production.</b> Dark slate + mono + square corners + zero motion + a 3 px amber inset ring + a hazard strip. Gated on <code>html[data-edit]</code>, so no prod rule can leak in. Sliders and lighting stay in lil-gui (its own root is <code>z-index:1001</code> — ours stops at 1000 on purpose so lil-gui is never buried). Prod chrome is hidden in this mode except the pins, which become the drag targets for <code>TransformControls</code>.</p>
+
+</div>
+</body>
+</html>
