@@ -74,6 +74,17 @@ export const characters: CharacterDef[] = [
     color: '#5CB85C',
     bio: 'Rich, vain and quick to brag about whatever his family bought this week. Gian’s sidekick, Nobita’s rival, and secretly the most sensitive of the group.',
   },
+  {
+    id: 'dekisugi',
+    name: 'Hidetoshi Dekisugi',
+    shortName: 'Dekisugi',
+    jpName: '出木杉 英才',
+    height: 1.42,
+    position: [5.4, layout.standY, 7.4],
+    rotationY: -0.2,
+    color: '#3FA08C',
+    bio: 'Top of the class, kind to everyone, and effortlessly good at everything Nobita is not. The only rival Doraemon’s gadgets cannot beat, which is exactly why Nobita worries about him and Shizuka.',
+  },
 ];
 
 export const characterById = (id: string) => characters.find((c) => c.id === id);
