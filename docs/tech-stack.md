@@ -1,94 +1,74 @@
 # Tech Stack — nobita-house-3d
 
-Locked 2026-08-02. All versions verified against npm registry on that date (not from model memory).
+Rewritten 2026-09-10 for the exterior-diorama direction. Supersedes the 2026-08-02 dollhouse-interior stack; decision history lives in `plans/260910-1419-nobita-house-exterior-diorama/`.
 
-## Product decisions (input to every choice below)
+## Product shape
 
-| Decision | Value |
-|---|---|
-| Scope | Ground floor + 2nd floor (Nobita's room, parents' room, hallway, landing) + yard |
-| Interaction | Dollhouse — orbit, toggle roof / 2F / wall cutaway, click hotspot → camera fly + info card |
-| Art style | Low-poly stylized, flat/faceted shading, fixed 8-colour palette |
-| Asset source | Hyper3D Rodin **web UI, manual** — human generates + downloads GLB |
-| Prop placement | **In-app editor mode** (`?edit=1`) → export `layout.json`; prod build reads JSON only |
-| Bootstrapping | Auto-generated box proxies for every prop with no GLB yet — app runs from day 1 |
-| UI language | English only (no i18n layer); JP kana room subtitles kept as decoration via subsetted Noto Sans JP |
-| Hotspot density | All 12+ hotspots kept in data; pins rendered only for currently-visible floor/room |
-| Wall cutaway | Single global auto-cutaway (walls facing camera fade). No per-wall control. |
-| Deployment | None for now — local `npm run dev` only. `base: '/'`, no CI/CD. |
+Single-page web diorama: orbit Nobita's house from the street, five characters on the sidewalk with procedural idle motion, click a character → camera fly + info card. Exterior only, English UI, local dev only.
 
 ## Runtime
 
 | Layer | Choice | Version | Why |
 |---|---|---|---|
-| Build | `vite` | 8.2.0 | Fast HMR, native TS, zero-config static output |
-| Language | `typescript` | 7.0.2 | Strict mode; 3D math + many modules make types load-bearing |
-| 3D engine | `three` | 0.185.1 | WebGL renderer (see rejection note) |
-| Camera | `camera-controls` | 3.1.2 | Damped `setLookAt` promises, solid touch/pointer handling, focal-offset support. Note: planning rejected its `fitToBox` — it preserves the *current* azimuth, which lands the camera inside walls. Room framing uses own pure math instead. |
-| Model loading | `GLTFLoader` + `MeshoptDecoder` | (bundled in `three/examples`) | No extra dep |
-| UI | Plain DOM + CSS | — | UI is a handful of panels; a framework buys nothing |
-| State | Plain TS module + `EventTarget` | — | ~6 pieces of state (active room, roof on, floor filter, selected hotspot, edit mode, loading) |
+| Package manager / runner | bun | 1.4 | User preference; scripts run with `bun` |
+| Build | vite | 8.2 | Fast HMR, zero-config static output |
+| Language | typescript | 7.0 | Strict mode |
+| UI framework | react + react-dom | 19.2 | Pinned `~19.2` — `@react-three/fiber@9` declares `react >=19 <19.3` |
+| 3D | three | 0.186 | WebGL renderer |
+| React bridge | @react-three/fiber | 9.7 | Declarative scene graph, per-frame hooks |
+| Helpers | @react-three/drei | 10.7 | `CameraControls`, `useGLTF`, `useProgress`, `Sky` |
+| State | zustand | 5 | Selected character, model availability, camera reset token |
+| Lint/format | Biome | 2.5 | Single tool, no plugin stack |
+| Tests | vitest | 4 | Data-integrity tests only |
 
-## Dev-only
+Known trap: drei `<SoftShadows>` fails to compile against three 0.186 (`vogelDiskSample: function already has a body`) and whites out the whole canvas. Default PCF shadows are used instead.
 
-| Tool | Version | Use |
-|---|---|---|
-| `lil-gui` | 0.21.0 | Editor mode panel, lighting tweaks |
-| `stats.js` | latest | FPS/ms HUD |
-| `TransformControls` | `three/examples` | Drag-place props in `?edit=1` |
+## Asset pipeline
 
-## Asset toolchain (offline, not shipped)
+Gemini reference images → Hyper3D Rodin (manual, user) → Blender via MCP → gltf-transform. The full runbook, including the recolour tooling and the procedural house/environment builders, is `docs/asset-pipeline.md`.
 
-| Tool | Version | Use |
-|---|---|---|
-| `@gltf-transform/cli` | 4.4.2 | `weld → simplify → resize → meshopt` on raw Rodin exports |
+## Scene architecture
 
-Pipeline:
-1. Generate in Rodin web UI (text-to-3D preferred — more style-consistent across 65 props than image-to-3D).
-2. Download GLB → `assets/raw/<asset-id>.glb` (gitignored).
-3. `npm run assets:build` → optimized GLB in `public/models/<asset-id>.glb` (committed).
-4. Per-asset metadata (scale, pivot offset, rotation fix, room, hotspot flag) lives in the asset manifest — **Rodin does not centre pivots**, so this correction layer is mandatory, not optional.
-5. Place in world via `?edit=1` → export `layout.json`.
+```
+src/
+  app.tsx                Canvas + UI roots; preflights model URLs (HEAD) so missing GLBs
+                         render as proxies instead of breaking Suspense
+  config.ts              camera limits, model paths
+  data/                  characters (ids, heights, bios, spawn), scene layout (metres)
+  scene/                 house, environment, foliage, character, lighting, camera-rig
+  scene/model-or-proxy   GLB when it exists on the server, placeholder otherwise
+  scene/use-character-motion  procedural idle: breath bob+squash, sway, hover lift, select hop
+  state/store.ts         zustand store + model preflight
+  ui/                    loading veil, info card, view controls, roster, credits
+scripts/
+  gen-ref-images.mjs     Gemini image generation (Flash 1K, 3 views; Pro/2K behind flags)
+  recolor-character-texture.py  per-character HSV recolour rules
+  build-assets.mjs       dedup → flatten+join (non-characters) → weld → resize → meshopt
+  blender/               env_build.py · house_build.py · prep_character.py · export_glb.py
+```
 
-## Rendering recipe
+Conventions that bite: glTF is +Y up with the street at +Z; Blender builders either construct facing −Y (house) or flip Y as the **last** step (environment — anything added after the flip exports mirrored). `box()`-style helpers bake translation into the mesh, so rotations must happen in bmesh, not on the object.
 
-- Materials: `MeshStandardMaterial` with `flatShading` for props; `MeshToonMaterial` reserved for character-like assets.
-- Lights: hemisphere ambient + directional key (casts shadow) + soft fill + rim. No PCFSoft on every light.
-- Shadows: single directional shadow map for the diorama; baked shadow plane under the base.
-- Colour: `THREE.ColorManagement` enabled, `outputColorSpace = SRGBColorSpace`, neutral tone mapping (filmic curves mud the flat palette).
-- Texture strategy: one shared palette texture / vertex colours where possible — low-poly does not need per-prop maps.
+## Measured performance (M4, headless Chromium, 2026-09-10)
 
-## Performance budget (mobile Safari + Chrome, ~65 props)
-
-| Metric | Target |
+| Metric | Value |
 |---|---|
-| Draw calls | < 120 (revised — see below) |
-| Triangles | < 80k |
-| Texture memory | < 40 MB |
-| FPS | 60 desktop, ≥ 30 mid-tier mobile |
-| Initial payload (JS + first models) | < 3 MB gzipped |
+| FPS | 60 |
+| Draw calls | 76 |
+| Triangles | 511k |
+| Textures / geometries | 18 / 54 |
+| `public/models` payload | 16 MB |
 
-## Rejected, with reason
+The plan's 300k-triangle target is exceeded (five 40–50k characters plus an 82k house); at 60 FPS desktop this is not acted on. First lever if mobile suffers: character LODs, then 1024→512 textures.
 
-| Rejected | Reason |
-|---|---|
-| `WebGPURenderer` / TSL | No measurable win at this scene size; adds renderer-migration risk and a thinner ecosystem for the postprocessing/controls used here. WebGL path is fully sufficient. |
-| React / react-three-fiber | Scene is imperative and static-ish; a reconciler adds bundle + indirection for no gain. |
-| `three-mesh-bvh` | Raycast target set is ~15 hotspot proxies, not a dense mesh. Revisit only if profiling shows raycast cost. |
-| `pmndrs/postprocessing` | Flat low-poly style needs no SSAO/bloom stack. Reconsider only if an outline pass is added. |
-| Draco compression | Meshopt decodes faster with a much smaller decoder; low-poly meshes compress fine either way. |
-| `zustand` / `nanostores` | Six state fields. YAGNI. |
+## Run
 
-The original `< 50` draw-call target came from a generic best-practices article, not from this scene's composition. Planning measured the real shape: ~32 for the shell (exterior walls must stay individually addressable for cutaway) + ~63 prop objects ≈ 95. Roughly 100 draw calls of trivial low-poly geometry is not a real constraint on a modern mobile GPU, and forcing `BatchedMesh` to hit an arbitrary number would break per-instance raycasting and the layout editor for no measured gain. **Budget renegotiated to `< 120`; triangle count is the meaningful gate.** `BatchedMesh` / `InstancedMesh` remain documented, unbuilt escape hatches triggered by measured frame time.
-
-## Resolved during planning
-
-| Item | Decision |
-|---|---|
-| Lint/format | **Biome 2.5.6** over ESLint + Prettier. One package vs six; its Rust parser never loads `typescript`, so the Go-native `typescript@7.0.2` cannot break linting. No framework lint plugins needed here, so ESLint's ecosystem advantage buys nothing. |
-| Test runner | Vitest, for pure logic only — bounds/framing math, manifest integrity, layout round-trip. No E2E harness; browser behaviour covered by a manual device matrix + keyboard walkthrough. |
-| Deployment | Deferred by user decision. Revisit before any public release (needs `base` path + CI). |
+```sh
+bun install
+bun run dev        # http://localhost:5173
+bun run lint && bun run typecheck && bun run test && bun run build
+```
 
 ## Attribution
 
-Fan project. Doraemon © Fujiko Pro / Shogakukan / TV Asahi. Personal / portfolio use only — commercial use would require a licence.
+Fan project. Doraemon © Fujiko Pro / Shogakukan / TV Asahi. Personal / portfolio use only.

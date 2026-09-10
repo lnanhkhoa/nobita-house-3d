@@ -59,10 +59,10 @@ function Instance({ gltf, scale }: { gltf: LoadedGltf; scale: number }) {
 /** Scales a loaded model so its own height matches the placement's target height. */
 function useUnitScale(gltf: LoadedGltf, target: number) {
   return useMemo(() => {
-    const box = gltf.scene.clone(true);
-    box.updateWorldMatrix(true, true);
+    // Geometry-space is close enough to world-space here: prep_character.py applies all
+    // transforms before export, so no clone or matrix update is needed just to measure.
     let maxY = 0;
-    box.traverse((node) => {
+    gltf.scene.traverse((node) => {
       const mesh = node as {
         isMesh?: boolean;
         geometry?: { boundingBox?: { max: { y: number } }; computeBoundingBox: () => void };

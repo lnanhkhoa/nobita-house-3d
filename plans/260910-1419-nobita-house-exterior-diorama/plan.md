@@ -1,7 +1,7 @@
 ---
 title: "Nobita's House — Exterior Diorama with Characters"
 description: "Web 3D diorama of Nobita's house exterior with 5 animated Doraemon characters. React + Vite + three.js (R3F). Assets: Gemini-generated reference images → Hyper3D Rodin (manual, user) → Blender (MCP) cleanup → Mixamo rig → GLB."
-status: in-progress
+status: mostly-done — blocked only on user-supplied tree/hedge GLBs
 priority: P2
 branch: "main"
 tags: [threejs, r3f, react, vite, blender, hyper3d, mixamo, doraemon]
@@ -51,9 +51,20 @@ Interior rooms, dollhouse toggles, editor mode, i18n, mobile-first chrome from o
 | 3 | [Blender: environment and house](phase-03-blender-environment.md) | — | me (MCP) | **done** — both built procedurally; Rodin not used for architecture |
 | 4 | [Character pipeline: Rodin → Blender → GLB](phase-04-character-pipeline.md) | 2 (character GLBs) | me ↔ user | **done** — all 5 shipped, Gian recoloured to canon |
 | 5 | [Web app: scene, animation, interaction, UI](phase-05-web-app.md) | 1; assets from 3, 4 arrive incrementally | me | **done** |
-| 6 | [Perf, polish, docs](phase-06-perf-polish-docs.md) | 3, 4, 5 | me | pending |
+| 6 | [Perf, polish, docs](phase-06-perf-polish-docs.md) | 3, 4, 5 | me | **done** — see acceptance results below |
 
 Phases 1 and 2 run first, in parallel. 3, 4, 5 overlap: web work continues on proxies while the user runs Rodin/Mixamo.
+
+## Acceptance results (2026-09-10)
+
+1. ✅ Proxy-first loading; every delivered GLB replaced its proxy with no code change.
+2. ✅→adjusted: idle + select reaction ship as **procedural** motion (user decision after the sculpts arrived posed and unskinned); info cards work.
+3. ✅ Orbit limits, click-to-frame fly with focal offset, Reset view.
+4. Partial: payload 16 MB < 25 ✅; triangles 511k > 300k target, accepted at 60 FPS desktop (measured, M4 headless Chromium; levers documented in tech-stack.md). Mobile untested.
+5. ✅ Loading veil with progress; credits line.
+6. ✅ `build`, `lint`, `typecheck`, `test` clean (bun).
+
+Outstanding: `public/models/props/{tree,hedge}.glb` from the user's Rodin credits; placeholders render meanwhile. Root README intentionally not created — repository rules forbid markdown outside `plans/`/`docs/` without an explicit request; run instructions live in `docs/tech-stack.md`.
 
 ## Module contract
 
