@@ -8,6 +8,9 @@ import { useAppStore } from '../state/store';
 
 const reducedMotion = () => window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
+/** Scratch vector for the per-frame target clamp; avoids allocating during a drag. */
+const scratchTarget = new Vector3();
+
 /** Orbit with lot-bounded target; flies to the selected character and back on reset. */
 export function CameraRig() {
   const controls = useRef<CameraControls>(null);
@@ -73,19 +76,21 @@ export function CameraRig() {
       maxDistance={config.camera.maxDistance}
       minPolarAngle={config.camera.minPolarAngle}
       maxPolarAngle={config.camera.maxPolarAngle}
-      smoothTime={0.35}
-      // Lower sensitivity plus a longer dragging smooth time makes the view ease
-      // in and out of a drag, reading as acceleration rather than a 1:1 snap.
-      azimuthRotateSpeed={0.55}
-      polarRotateSpeed={0.55}
-      truckSpeed={0.8}
-      draggingSmoothTime={0.28}
+      // Damping is input latency: at the old 0.35/0.28 the camera took 1.16 s to settle and
+      // had covered 6% of a rotation after 50 ms, which reads as lag even at a solid 60 fps.
+      // Dragging stays nearly 1:1; the longer smoothTime only shapes the scripted fly-to.
+      smoothTime={0.16}
+      azimuthRotateSpeed={0.7}
+      polarRotateSpeed={0.7}
+      truckSpeed={0.9}
+      draggingSmoothTime={0.07}
       boundaryFriction={0.2}
       onChange={() => {
         // Keep the orbit target inside the lot so the user cannot pan away from the diorama.
         const c = controls.current;
         if (!c) return;
-        const t = c.getTarget(new Vector3());
+        // Reuse one scratch vector: this fires every frame during a drag.
+        const t = c.getTarget(scratchTarget);
         const { halfWidth, halfDepth } = config.lot;
         const cx = Math.max(-halfWidth, Math.min(halfWidth, t.x));
         const cz = Math.max(-halfDepth, Math.min(halfDepth + 4, t.z));
