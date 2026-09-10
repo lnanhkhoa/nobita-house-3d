@@ -56,9 +56,9 @@ To bring skeletal animation back later, export a T-pose FBX from Blender, rig it
 
 ## 5. Recolouring a texture
 
-Rodin does not always hit the canon palette. `scripts/recolor-gian-texture.py` rewrites Gian's diffuse map from a yellow shirt, magenta stripe and brown trousers to the canon orange, cream and navy, working in HSV so the original shading survives. `prep_character.py` then swaps the base colour image at import time via `DIFFUSE_OVERRIDE`.
+Rodin does not always hit the canon palette. `scripts/recolor-character-texture.py` holds one rule table per character and rewrites only the measured HSV regions of the diffuse map, keeping the original shading. It reads the texture straight out of the raw GLB, so no manual extraction step exists.
 
-Known remaining mismatches, not yet corrected: Shizuka wears a blue skirt instead of red, and Suneo a blue shirt instead of green.
+Applied so far: Gian (yellow shirt → orange, magenta stripe → cream, brown trousers → navy), Shizuka (blue skirt → red), Suneo (blue shirt → green, teal shorts → brown). To fix a future model, add a rule entry with gates measured from its hue histogram, run the script, and swap the image in Blender via `DIFFUSE_OVERRIDE` in `prep_character.py`.
 
 ## 6. Optimise
 

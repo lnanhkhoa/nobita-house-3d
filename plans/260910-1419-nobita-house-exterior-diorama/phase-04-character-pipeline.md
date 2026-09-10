@@ -15,11 +15,11 @@
 ## Decisions taken during the phase
 
 - **No Mixamo.** The sculpts are posed (Gian mid-flex, Doraemon holding a dorayaki) and carry no skin. Auto-rigging needs arms clear of the body and open hands. Procedural motion in `src/scene/use-character-motion.ts` replaces it.
-- **Gian recoloured, not regenerated.** `scripts/recolor-gian-texture.py` remaps the diffuse map in HSV: yellow shirt → canon orange, magenta stripe → cream, brown trousers → navy. Skin, hair and shoes are excluded by the saturation and value gates. Costs nothing and keeps the sculpt.
+- **Recoloured, not regenerated.** `scripts/recolor-character-texture.py` remaps measured HSV regions per character: Gian's yellow shirt → orange, magenta stripe → cream, brown trousers → navy; Shizuka's blue skirt → red; Suneo's blue shirt → green and teal shorts → brown. Skin, hair and shoes are excluded by the hue/saturation/value gates. Costs nothing and keeps the sculpts.
 - **Gian's FBX carried a full LOD ladder** (200k / 100k / 50k / 25k / 12.5k), so LOD2 is used directly instead of decimating.
 - The folder originally named `gian` held a second copy of Shizuka; the user replaced it.
 
 ## Left open
 
-- Shizuka's skirt is blue, canon is red. Suneo's shirt is blue, canon is green. Same recolour technique would fix both.
-- 421k triangles on screen, above the 300k target in the plan. Not a measured problem yet; drop to a lower LOD if mobile frame time suffers.
+- ~~Shizuka and Suneo colour mismatches~~ — fixed 2026-09-10 with the same recolour technique.
+- ~507k triangles on screen (characters + detailed house), above the 300k plan target. Not a measured problem on desktop; drop characters to a lower LOD if mobile frame time suffers.
