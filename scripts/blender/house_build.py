@@ -35,6 +35,9 @@ UF_TOP_Z = UF_BASE_Z + UF["h"]                 # 5.30
 GABLE_OVERHANG = 0.5
 GABLE_PITCH = math.radians(20.0)
 
+# Porch clearance in X on the front eave; build_porch() places the porch inside this gap.
+PORCH_GAP = (0.45, 3.85)
+
 TILE_W = 0.30        # kawara pan width
 TILE_RIB = 0.045     # how far the roll stands proud of the pan
 COURSE_L = 0.29      # visible length of one course up the slope
@@ -337,13 +340,14 @@ def panel_door(coll, name, centre, width, height, facing=-1.0, wall=None):
                      (cx, fy + facing * 0.055, cz + height * 0.28), "glass", bevel=0.0))
     parts.append(box(coll, f"{name}_handle", (0.045, 0.08, 0.30),
                      (cx + width / 2 - 0.13, fy + facing * 0.08, cz - 0.02), "metal", bevel=0.012))
-    for tag, size, off in (
-        ("top", (width + 0.22, 0.10, 0.09), (0, 0, height / 2 + 0.045)),
-        ("left", (0.09, 0.10, height + 0.09), (-width / 2 - 0.055, 0, 0)),
-        ("right", (0.09, 0.10, height + 0.09), (width / 2 + 0.055, 0, 0)),
-    ):
-        parts.append(box(coll, f"{name}_case_{tag}", size, (cx + off[0], fy - facing * 0.02,
-                                                            cz + off[2]), "frame", bevel=0.008))
+    # The head casing spans the full niche depth: from a high camera the gap between the
+    # door leaf and the niche ceiling otherwise reads as a black slot above the door.
+    parts.append(box(coll, f"{name}_case_top", (width + 0.22, NICHE + 0.08, 0.09),
+                     (cx, cy - facing * (NICHE / 2 - 0.03), cz + height / 2 + 0.045),
+                     "frame", bevel=0.008))
+    for tag, off in (("left", -width / 2 - 0.055), ("right", width / 2 + 0.055)):
+        parts.append(box(coll, f"{name}_case_{tag}", (0.09, 0.10, height + 0.09),
+                         (cx + off, fy - facing * 0.02, cz), "frame", bevel=0.008))
     return parts
 
 
@@ -544,7 +548,12 @@ def build():
                      (0, UF_FRONT - 0.07, UF_TOP_Z + 0.72), "wood_shutter", bevel=0.01))
 
     # --- eaves, gutters, downpipes ---
-    parts += eave_run(coll, "eave_apron_front", (-eave_half_w, eave_front, APRON_EAVE_Z),
+    # The porch gable interrupts the front eave; running fascia, rafters and gutter straight
+    # through its roof was the most visible clash in review. PORCH_GAP mirrors build_porch().
+    gap_l, gap_r = PORCH_GAP
+    parts += eave_run(coll, "eave_apron_front_l", (-eave_half_w, eave_front, APRON_EAVE_Z),
+                      (gap_l, eave_front, APRON_EAVE_Z), (0, -1, 0), soffit=OVERHANG)
+    parts += eave_run(coll, "eave_apron_front_r", (gap_r, eave_front, APRON_EAVE_Z),
                       (eave_half_w, eave_front, APRON_EAVE_Z), (0, -1, 0), soffit=OVERHANG)
     parts += eave_run(coll, "eave_apron_back", (-eave_half_w, eave_back, APRON_EAVE_Z),
                       (eave_half_w, eave_back, APRON_EAVE_Z), (0, 1, 0), soffit=OVERHANG, rafters=False)
@@ -556,7 +565,9 @@ def build():
                           fascia_h=0.15, soffit=GABLE_OVERHANG)
         parts += gutter_run(coll, f"gutter_gable_{tag}", (sx * gable_eave_x, verge_front, UF_TOP_Z),
                             (sx * gable_eave_x, verge_back, UF_TOP_Z), (sx, 0, 0))
-    parts += gutter_run(coll, "gutter_apron_front", (-eave_half_w, eave_front, APRON_EAVE_Z),
+    parts += gutter_run(coll, "gutter_apron_front_l", (-eave_half_w, eave_front, APRON_EAVE_Z),
+                        (gap_l, eave_front, APRON_EAVE_Z), (0, -1, 0))
+    parts += gutter_run(coll, "gutter_apron_front_r", (gap_r, eave_front, APRON_EAVE_Z),
                         (eave_half_w, eave_front, APRON_EAVE_Z), (0, -1, 0))
     parts += downpipe(coll, "downpipe_upper", (gable_eave_x + 0.06, verge_front + 0.40, UF_TOP_Z - 0.24),
                       (gable_eave_x + 0.06, verge_front + 0.40, APRON_TOP_Z + 0.35))
@@ -612,7 +623,9 @@ def build_porch(coll, ground_wall):
     eave_right = px_right + 0.35
     ridge_z = eave_z + (eave_right - px_mid) * math.tan(pitch)
     verge_front = front_y - 0.30
-    verge_back = gf_front + 0.20
+    # Runs back past the apron plane so the buried edge is invisible; the slopes emerge
+    # through the geya tiles like a dormer instead of stopping mid-slope.
+    verge_back = gf_front + 0.70
 
     parts.append(box(coll, "porch_right_wall", (0.22, 1.75, eave_z),
                      (px_right, gf_front - 0.85, eave_z / 2), "stucco", bevel=0.025))
@@ -630,7 +643,7 @@ def build_porch(coll, ground_wall):
                               (px_mid, verge_front, ridge_z), (px_mid, verge_back, ridge_z)),
                              u_per_tile=3))
     parts.append(ridge_cap(coll, "porch_ridge", (px_mid, verge_front + 0.02, ridge_z + 0.04),
-                           (px_mid, verge_back, ridge_z + 0.04), width=0.19, height=0.13))
+                           (px_mid, gf_front + 0.55, ridge_z + 0.04), width=0.19, height=0.13))
     parts.append(gable_wall(coll, "porch_gable_wall", (eave_right - eave_left) / 2 - 0.32,
                             verge_front + 0.18, eave_z - 0.05, ridge_z - 0.09, thickness=0.16,
                             centre_x=px_mid))
