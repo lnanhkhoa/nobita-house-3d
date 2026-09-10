@@ -105,6 +105,31 @@ const SUBJECTS = {
       'soft-pink blossom blobs merged together, completely solid matte surfaces with no ' +
       'individual petals, no texture noise, no holes, no green leaves, nothing else in frame',
   },
+  // Texture sources for the leaf-card canopies: one flat cluster on pure black so alpha can be
+  // keyed from luminance, plus a seamless bark tile for a derived normal map.
+  'leaf-cluster': {
+    kind: 'texture',
+    name: 'a single cluster of fresh green leaves',
+    description:
+      'a small bushy cluster of about twenty broad green leaves radiating from one hidden centre, seen ' +
+      'straight on, rendered as smooth semi-stylized 3D foliage, crisp edges, evenly lit, centred and ' +
+      'filling seventy percent of the frame, on a perfectly uniform pure black background',
+  },
+  'blossom-cluster': {
+    kind: 'texture',
+    name: 'a single cluster of cherry blossom flowers',
+    description:
+      'a small dense cluster of about fifteen soft pink five-petal sakura blossoms with a few buds, seen ' +
+      'straight on, rendered as smooth semi-stylized 3D flowers, crisp edges, evenly lit, centred and ' +
+      'filling seventy percent of the frame, on a perfectly uniform pure black background',
+  },
+  bark: {
+    kind: 'texture',
+    name: 'a seamless tree bark texture tile',
+    description:
+      'a flat close-up of grey-brown deciduous tree bark with vertical ridges and fissures, filling the ' +
+      'entire frame edge to edge with no border, evenly lit with no shadows, tileable',
+  },
   house: {
     kind: 'building',
     name: "Nobita's house from Doraemon",
@@ -178,11 +203,13 @@ function buildPrompt(subject, who, view, hasReference) {
       ? CHARACTER_POSE
       : subject.kind === 'plant'
         ? 'The whole plant visible with margin, centred, upright, perfectly symmetrical lighting so no side is in deep shadow.'
-        : 'Whole building visible with margin, centred.';
+        : subject.kind === 'texture'
+          ? 'Flat frontal view, no perspective, no ground, no shadow cast outside the subject.'
+          : 'Whole building visible with margin, centred.';
   const consistency = hasReference
     ? 'Use the attached image as the exact same subject: identical colours, proportions, outfit and pose. Only the camera angle changes. '
     : '';
-  const style = subject.kind === 'plant' ? PLANT_STYLE : STYLE;
+  const style = subject.kind === 'plant' ? PLANT_STYLE : subject.kind === 'texture' ? '' : STYLE;
   return `${consistency}${VIEW_TEXT[view]} Subject: ${who}. ${pose} ${style}`;
 }
 

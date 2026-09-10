@@ -49,11 +49,17 @@ function Instance({ gltf, scale }: { gltf: LoadedGltf; scale: number }) {
   const scene = useMemo(() => {
     const clone = gltf.scene.clone(true) as Group;
     clone.traverse((node) => {
-      const mesh = node as { isMesh?: boolean; castShadow?: boolean; receiveShadow?: boolean };
-      if (mesh.isMesh) {
-        mesh.castShadow = true;
-        mesh.receiveShadow = true;
-      }
+      const mesh = node as {
+        isMesh?: boolean;
+        castShadow?: boolean;
+        receiveShadow?: boolean;
+        material?: { name?: string };
+      };
+      if (!mesh.isMesh) return;
+      mesh.castShadow = true;
+      // Leaf and blossom cards cast shadows but do not receive them: hundreds of overlapping
+      // alpha-tested quads self-shadow into a muddy dark mass otherwise.
+      mesh.receiveShadow = !(mesh.material?.name ?? '').includes('card');
     });
     return clone;
   }, [gltf.scene]);

@@ -29,7 +29,8 @@ for (const file of files) {
   const dest = join(OUT, rel);
   mkdirSync(resolve(dest, '..'), { recursive: true });
   const isCharacter = rel.includes('character');
-  const textureSize = isCharacter ? '1024' : '2048';
+  // Props ship 1024 leaf/bark textures; 2048 would only upscale them.
+  const textureSize = isCharacter || rel.includes('props') ? '1024' : '2048';
 
   run(['dedup', file, dest]);
   if (!isCharacter) {
@@ -41,6 +42,8 @@ for (const file of files) {
   run(['weld', dest, dest]);
   run(['resize', dest, dest, '--width', textureSize, '--height', textureSize]);
   run(['prune', dest, dest]);
+  // WebP cuts PNG leaf cards and PBR maps by ~4x; three.js reads EXT_texture_webp natively.
+  run(['webp', dest, dest, '--quality', '85']);
   run(['meshopt', dest, dest, '--level', 'high']);
 
   const before = statSync(file).size;

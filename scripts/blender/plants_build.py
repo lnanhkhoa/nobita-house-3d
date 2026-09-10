@@ -12,11 +12,15 @@ placement to its own height anyway.
 """
 
 import math
+import os
 import random
 
 import bmesh
 import bpy
-from mathutils import Vector
+from mathutils import Matrix, Vector
+
+ROOT_DIR = "/Users/khoale/Devs/khoale/nobita-house-3d"
+TEX_DIR = f"{ROOT_DIR}/assets/raw/textures"
 
 COLOURS = {
     "leaf": (0.33, 0.60, 0.27, 1.0),
@@ -37,6 +41,124 @@ def material(name):
         bsdf.inputs["Base Color"].default_value = COLOURS[name]
         bsdf.inputs["Roughness"].default_value = 0.88
     return mat
+
+
+def image_node(mat, path, colorspace="sRGB"):
+    node = mat.node_tree.nodes.new("ShaderNodeTexImage")
+    node.image = bpy.data.images.load(path, check_existing=True)
+    node.image.colorspace_settings.name = colorspace
+    return node
+
+
+def card_material(name, texture):
+    """Alpha-clipped, double-sided leaf/blossom card material with per-vertex tint."""
+    key = f"plant_{name}"
+    mat = bpy.data.materials.get(key)
+    if mat is not None:
+        return mat
+    mat = bpy.data.materials.new(key)
+    mat.use_nodes = True
+    nt = mat.node_tree
+    bsdf = nt.nodes["Principled BSDF"]
+    bsdf.inputs["Roughness"].default_value = 0.85
+    tex = image_node(mat, f"{TEX_DIR}/{texture}.png")
+    tint = nt.nodes.new("ShaderNodeVertexColor")
+    tint.layer_name = "Col"
+    mix = nt.nodes.new("ShaderNodeMix")
+    mix.data_type = "RGBA"
+    mix.blend_type = "MULTIPLY"
+    mix.inputs["Factor"].default_value = 1.0
+    nt.links.new(tex.outputs["Color"], mix.inputs[6])
+    nt.links.new(tint.outputs["Color"], mix.inputs[7])
+    nt.links.new(mix.outputs[2], bsdf.inputs["Base Color"])
+    # Blender 5 has no CLIP blend mode; the glTF exporter emits alphaMode MASK only when it
+    # sees a Greater Than math node feeding the Alpha socket, with the threshold as cutoff.
+    clip = nt.nodes.new("ShaderNodeMath")
+    clip.operation = "GREATER_THAN"
+    clip.inputs[1].default_value = 0.5
+    nt.links.new(tex.outputs["Alpha"], clip.inputs[0])
+    nt.links.new(clip.outputs[0], bsdf.inputs["Alpha"])
+    mat.use_backface_culling = False
+    return mat
+
+
+def bark_material(colour="bark"):
+    """Trunk material with the derived bark normal map over a plain clay base colour."""
+    key = f"plant_{colour}_textured"
+    mat = bpy.data.materials.get(key)
+    if mat is not None:
+        return mat
+    mat = bpy.data.materials.new(key)
+    mat.use_nodes = True
+    nt = mat.node_tree
+    bsdf = nt.nodes["Principled BSDF"]
+    bsdf.inputs["Base Color"].default_value = COLOURS[colour]
+    bsdf.inputs["Roughness"].default_value = 0.92
+    normal_tex = image_node(mat, f"{TEX_DIR}/bark-normal.png", colorspace="Non-Color")
+    nmap = nt.nodes.new("ShaderNodeNormalMap")
+    nmap.inputs["Strength"].default_value = 0.9
+    nt.links.new(normal_tex.outputs["Color"], nmap.inputs["Color"])
+    nt.links.new(nmap.outputs["Normal"], bsdf.inputs["Normal"])
+    return mat
+
+
+def scatter_cards(coll, name, surface_obj, count, size, mat, rng, tint_base, tint_var=0.14,
+                  tilt_max=0.55):
+    """Lay textured quads over a mesh surface: each card sits tangent to the local surface,
+    randomly rolled and tilted outward, so the canopy edge breaks into leaves while the
+    solid core still fills the interior."""
+    mesh = surface_obj.data
+    mesh.calc_loop_triangles()
+    tris = list(mesh.loop_triangles)
+    areas = [t.area for t in tris]
+    total = sum(areas) or 1.0
+    bm = bmesh.new()
+    uv_layer = bm.loops.layers.uv.new("UVMap")
+    col_layer = bm.loops.layers.color.new("Col")
+    for _ in range(count):
+        # Area-weighted random face, then a random barycentric point on it.
+        pick = rng.uniform(0, total)
+        acc = 0.0
+        tri = tris[-1]
+        for t, a in zip(tris, areas):
+            acc += a
+            if acc >= pick:
+                tri = t
+                break
+        r1, r2 = rng.random(), rng.random()
+        if r1 + r2 > 1:
+            r1, r2 = 1 - r1, 1 - r2
+        v0, v1, v2 = (mesh.vertices[i].co for i in tri.vertices)
+        point = v0 + (v1 - v0) * r1 + (v2 - v0) * r2
+        normal = Vector(tri.normal)
+        if normal.length < 1e-6:
+            continue
+        normal.normalize()
+        # Card frame: z along the (tilted) surface normal, random roll about it.
+        tilt_axis = normal.orthogonal().normalized()
+        tilted = normal.copy()
+        tilted.rotate(Matrix.Rotation(rng.uniform(-tilt_max, tilt_max), 4, tilt_axis))
+        frame = tilted.to_track_quat("Z", "Y").to_matrix()
+        frame = frame @ Matrix.Rotation(rng.uniform(0, 2 * math.pi), 3, "Z")
+        s = size * rng.uniform(0.75, 1.25)
+        # Push the card slightly off the core so it never z-fights with the blob.
+        centre = point + tilted * (0.02 * size)
+        corners = [Vector((-s / 2, -s / 2, 0)), Vector((s / 2, -s / 2, 0)),
+                   Vector((s / 2, s / 2, 0)), Vector((-s / 2, s / 2, 0))]
+        verts = [bm.verts.new(centre + frame @ c) for c in corners]
+        face = bm.faces.new(verts)
+        shade = 1.0 + rng.uniform(-tint_var, tint_var)
+        tint = (tint_base[0] * shade, tint_base[1] * shade, tint_base[2] * shade, 1.0)
+        for loop, uv in zip(face.loops, ((0, 0), (1, 0), (1, 1), (0, 1))):
+            loop[uv_layer].uv = uv
+            loop[col_layer] = tint
+    out_mesh = bpy.data.meshes.new(name)
+    bm.to_mesh(out_mesh)
+    bm.free()
+    obj = bpy.data.objects.new(name, out_mesh)
+    coll.objects.link(obj)
+    obj.data.materials.append(mat)
+    return obj
 
 
 def fresh_collection(name):
@@ -138,7 +260,8 @@ def build_tree(coll, seed=3, height=5.2):
     trunk_pts = [(0, 0, 0), (0.02, 0.01, trunk_h * 0.28), (0.06, 0.02, trunk_h * 0.62),
                  (lean * 0.6, 0.03, trunk_h * 0.9), (lean, 0.04, trunk_h + 0.35)]
     trunk_r = [0.30, 0.20, 0.17, 0.15, 0.11]
-    tapered_tube(coll, "tree_trunk", trunk_pts, trunk_r, "bark")
+    trunk = tapered_tube(coll, "tree_trunk", trunk_pts, trunk_r, "bark")
+    trunk.data.materials[0] = bark_material()
     top = Vector(trunk_pts[-2])
     for i in range(4):
         a = 2 * math.pi * i / 4 + 0.5
@@ -149,8 +272,11 @@ def build_tree(coll, seed=3, height=5.2):
     spread = height * 0.21
     elements = canopy_elements(rng, crown_c, spread, lobe_r=height * 0.21, big_count=7,
                                bump_count=34, bump_r=height * 0.085, flatten=1.0)
-    blob_mesh(coll, "tree_canopy", elements, resolution=height * 0.022, mat_name="leaf",
-              target_tris=16000)
+    core = blob_mesh(coll, "tree_canopy", elements, resolution=height * 0.022, mat_name="leaf_dark",
+                     target_tris=9000)
+    scatter_cards(coll, "tree_leaves", core, count=520, size=height * 0.17,
+                  mat=card_material("leafcard", "leaf-cluster"), rng=rng,
+                  tint_base=(0.92, 1.0, 0.88))
 
 
 def build_hedge(coll, seed=5, height=0.8):
@@ -167,8 +293,11 @@ def build_hedge(coll, seed=5, height=0.8):
         r = height * 0.42
         elements.append(((r * math.cos(u) * math.sqrt(1 - v * v), r * math.sin(u) * math.sqrt(1 - v * v),
                           dome_c[2] + r * v), height * rng.uniform(0.10, 0.15)))
-    blob_mesh(coll, "hedge_dome", elements, resolution=height * 0.03, mat_name="leaf_dark",
-              target_tris=3500)
+    core = blob_mesh(coll, "hedge_dome", elements, resolution=height * 0.03, mat_name="leaf_dark",
+                     target_tris=2500)
+    scatter_cards(coll, "hedge_leaves", core, count=140, size=height * 0.42,
+                  mat=card_material("leafcard", "leaf-cluster"), rng=rng,
+                  tint_base=(0.62, 0.78, 0.60), tint_var=0.10)
 
 
 def build_sakura(coll, seed=8, height=3.8):
@@ -177,7 +306,8 @@ def build_sakura(coll, seed=8, height=3.8):
     lean = 0.28
     trunk_pts = [(0, 0, 0), (0.05, 0, trunk_h * 0.35), (lean * 0.6, 0.02, trunk_h * 0.75),
                  (lean, 0.03, trunk_h + 0.3)]
-    tapered_tube(coll, "sakura_trunk", trunk_pts, [0.26, 0.17, 0.14, 0.10], "bark_dark")
+    trunk = tapered_tube(coll, "sakura_trunk", trunk_pts, [0.26, 0.17, 0.14, 0.10], "bark_dark")
+    trunk.data.materials[0] = bark_material("bark_dark")
     top = Vector(trunk_pts[-2])
     for i, (ax, ay) in enumerate(((-0.8, 0.5), (0.7, -0.4), (0.2, 0.9))):
         end = (top.x + ax * 0.8, top.y + ay * 0.8, trunk_h + 0.55)
@@ -187,8 +317,11 @@ def build_sakura(coll, seed=8, height=3.8):
     crown_c = (lean * 0.8, 0.05, trunk_h + height * 0.26)
     elements = canopy_elements(rng, crown_c, height * 0.19, lobe_r=height * 0.24, big_count=4,
                                bump_count=7, bump_r=height * 0.11, flatten=0.85)
-    blob_mesh(coll, "sakura_canopy", elements, resolution=height * 0.024, mat_name="blossom",
-              target_tris=12000)
+    core = blob_mesh(coll, "sakura_canopy", elements, resolution=height * 0.024, mat_name="blossom",
+                     target_tris=7000)
+    scatter_cards(coll, "sakura_blossoms", core, count=380, size=height * 0.20,
+                  mat=card_material("blossomcard", "blossom-cluster"), rng=rng,
+                  tint_base=(1.0, 0.98, 0.98), tint_var=0.06)
 
 
 def build_all():
