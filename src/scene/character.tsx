@@ -1,5 +1,6 @@
+import { useAnimations } from '@react-three/drei';
 import { useEffect, useRef, useState } from 'react';
-import type { Group, Mesh } from 'three';
+import { type Group, LoopOnce, type Mesh } from 'three';
 import { config } from '../config';
 import type { CharacterDef } from '../data/characters';
 import { useAppStore } from '../state/store';
@@ -25,17 +26,56 @@ function CharacterProxy({ def, hovered }: { def: CharacterDef; hovered: boolean 
 }
 
 /** Rodin exports arrive without shadow flags; set them once per loaded scene. */
-function LoadedCharacter({ gltf }: { gltf: LoadedGltf }) {
+function LoadedCharacter({ gltf, selected }: { gltf: LoadedGltf; selected: boolean }) {
+  const group = useRef<Group>(null);
+  const { actions } = useAnimations(gltf.animations, group);
+
   useEffect(() => {
     gltf.scene.traverse((node) => {
       const mesh = node as Mesh;
       if (mesh.isMesh) {
         mesh.castShadow = true;
         mesh.receiveShadow = true;
+        // Skinned bounds move with the bow; skip frustum culling so the mesh never blinks out.
+        if ((mesh as unknown as { isSkinnedMesh?: boolean }).isSkinnedMesh) mesh.frustumCulled = false;
       }
     });
   }, [gltf.scene]);
-  return <primitive object={gltf.scene} />;
+
+  // The welcome bow authored in Blender plays once each time the character is selected.
+  useEffect(() => {
+    const welcome = actions.welcome;
+    if (!selected || !welcome) return;
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    welcome.reset();
+    welcome.setLoop(LoopOnce, 1);
+    welcome.play();
+    return () => {
+      welcome.fadeOut(0.15);
+    };
+  }, [selected, actions]);
+
+  return (
+    <group ref={group}>
+      <primitive object={gltf.scene} />
+    </group>
+  );
+}
+
+/** Reports whether the loaded GLB carries the welcome clip, then renders it. */
+function WelcomeProbe({
+  gltf,
+  selected,
+  onHasWelcome,
+}: {
+  gltf: LoadedGltf;
+  selected: boolean;
+  onHasWelcome: (has: boolean) => void;
+}) {
+  useEffect(() => {
+    onHasWelcome(gltf.animations.some((clip) => clip.name === 'welcome'));
+  }, [gltf.animations, onHasWelcome]);
+  return <LoadedCharacter gltf={gltf} selected={selected} />;
 }
 
 export function Character({ def, index }: { def: CharacterDef; index: number }) {
@@ -45,7 +85,8 @@ export function Character({ def, index }: { def: CharacterDef; index: number }) 
   const motion = useRef<Group>(null);
   const url = `${config.models.characterDir}/${def.id}.glb`;
 
-  useCharacterMotion(motion, { height: def.height, phase: index * 1.27, selected, hovered });
+  const [hasWelcome, setHasWelcome] = useState(false);
+  useCharacterMotion(motion, { height: def.height, phase: index * 1.27, selected, hovered, hasWelcome });
 
   useEffect(() => {
     if (!hovered) return;
@@ -72,7 +113,7 @@ export function Character({ def, index }: { def: CharacterDef; index: number }) 
     >
       <group ref={motion}>
         <ModelOrProxy url={url} proxy={<CharacterProxy def={def} hovered={hovered} />}>
-          {(gltf) => <LoadedCharacter gltf={gltf} />}
+          {(gltf) => <WelcomeProbe gltf={gltf} selected={selected} onHasWelcome={setHasWelcome} />}
         </ModelOrProxy>
       </group>
     </group>

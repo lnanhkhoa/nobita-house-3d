@@ -50,9 +50,12 @@ Trees and shrubs are the opposite case and **are** good Rodin candidates. They a
 
 ## 4. Animation
 
-**There is no rigging step.** The Rodin sculpts arrive posed and unskinned (Gian mid-flex, Doraemon holding a dorayaki), which Mixamo's auto-rigger cannot handle, and flattening them to an A-pose would throw away the character in the poses. `src/scene/use-character-motion.ts` animates the static meshes instead: a breathing bob with a matching squash, a slow sway, a lift on hover, and a one-shot hop when the character is selected. Each character gets a phase offset so the group never moves in lockstep, and everything is suppressed under `prefers-reduced-motion`.
+Two layers, both honouring `prefers-reduced-motion`:
 
-To bring skeletal animation back later, export a T-pose FBX from Blender, rig it on mixamo.com, and merge the clips before export. Nothing in the app depends on the meshes staying unskinned.
+- **Procedural idle** (`src/scene/use-character-motion.ts`): breathing bob with a matching squash, slow sway, hover lift. Phase-offset per character.
+- **Skeletal welcome bow** (`scripts/blender/rig_welcome.py`, user request 2026-09-10): each shipped GLB carries a four-bone torso chain (root / spine / chest / head) and one `welcome` clip — bow toward the street, hold, rise (48 frames at 24 fps). Vertices are weighted by smooth height bands instead of bone-heat, which is deterministic and exactly sufficient for a bow; it also works with every held prop and fist the sculpts arrived with, where a full Mixamo limb rig would fail. The app plays the clip once per selection and suppresses its procedural hop when the clip exists.
+
+The rig script is idempotent over its own output: re-running it on an already-rigged GLB strips the old armature, vertex groups and stale actions before rebuilding. Blender 5 note: `action.fcurves` is gone (layered actions); new keyframes default to bezier anyway.
 
 ## 5. Recolouring a texture
 

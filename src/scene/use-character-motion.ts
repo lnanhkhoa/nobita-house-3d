@@ -17,6 +17,8 @@ interface Options {
   phase: number;
   selected: boolean;
   hovered: boolean;
+  /** True when the model carries a skeletal welcome clip; the procedural hop steps aside. */
+  hasWelcome?: boolean;
 }
 
 /**
@@ -25,7 +27,7 @@ interface Options {
  * animation because the Rodin sculpts ship posed and unskinned.
  */
 export function useCharacterMotion(ref: RefObject<Group | null>, opts: Options) {
-  const { height, phase, selected, hovered } = opts;
+  const { height, phase, selected, hovered, hasWelcome } = opts;
   const greetStart = useRef<number | null>(null);
   const reduced = useRef(prefersReducedMotion());
 
@@ -38,10 +40,11 @@ export function useCharacterMotion(ref: RefObject<Group | null>, opts: Options) 
     return () => query.removeEventListener('change', onChange);
   }, []);
 
-  // Re-trigger the greeting every time this character becomes the selected one.
+  // Re-trigger the greeting every time this character becomes the selected one. Models with
+  // a skeletal welcome bow keep breathing here but leave the greeting to the armature.
   useEffect(() => {
-    greetStart.current = selected ? -1 : null;
-  }, [selected]);
+    greetStart.current = selected && !hasWelcome ? -1 : null;
+  }, [selected, hasWelcome]);
 
   useFrame(({ clock }) => {
     const group = ref.current;

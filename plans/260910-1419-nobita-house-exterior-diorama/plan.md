@@ -26,7 +26,7 @@ Single-page web app: orbit around Nobita's house seen from the street (house, ya
 | Stack | React 19 + Vite 8 + TypeScript 7 + three 0.186 + @react-three/fiber 9 + drei 10. Biome. UI English. |
 | 3D generation | User has Hyper3D **Creator** plan → no API key. **I generate 2D reference images with Gemini (key in `.env`)**, user runs Rodin image-to-3D on the web UI and drops GLB into `assets/raw/`. |
 | Blender | MCP connected (Blender 5.2.1). Used for: import raw GLB, decimate, pivot/scale fix, material cleanup, build yard/wall/gate/road/pole procedurally, place trees (Poly Haven / Poly Pizza), export GLB. |
-| Animation | **Procedural, no rigging** (user decision 2026-09-10, revised). Rodin sculpts arrive posed and unskinned; Mixamo auto-rig cannot handle them and an A-pose regeneration would lose the poses. `use-character-motion.ts` does breathing, sway, hover lift and a select hop. |
+| Animation | **Procedural idle + in-house torso rig** (user decisions 2026-09-10, twice revised). Breathing/sway stay procedural; selection plays a skeletal `welcome` bow from a 4-bone torso chain rigged in Blender with height-band weights — chosen over Mixamo because the sculpts ship posed with held props. |
 | Deployment | None (local `npm run dev`). Unchanged from old plan. |
 
 ## Non-goals
