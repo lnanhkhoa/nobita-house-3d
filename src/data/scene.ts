@@ -10,7 +10,8 @@ export const layout = {
   },
   lot: { width: 15, depth: 13, wallHeight: 1.6, wallThickness: 0.22 },
   /** Front wall runs along this z; the gate opening is centred at x = gateX. */
-  wall: { frontZ: 5.8, gateX: 0.8, gateWidth: 1.4 },
+  /** gateX matches the house front door so the gate faces the entrance. */
+  wall: { frontZ: 5.8, gateX: 2.05, gateWidth: 1.4 },
   sidewalk: { depth: 1.9, height: 0.12 },
   /** Characters stand on the sidewalk slab, not the road surface. */
   standY: 0.12,

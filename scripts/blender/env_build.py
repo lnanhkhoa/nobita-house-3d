@@ -21,7 +21,8 @@ from mathutils import Vector
 LOT_W, LOT_D = 15.0, 13.0
 WALL_H, WALL_T = 1.6, 0.22
 FRONT_Y = 5.8           # front wall line
-GATE_X, GATE_W = 0.8, 1.4
+# Centred on the house door (door x = 2.05 in house_build.py) so gate and entrance align.
+GATE_X, GATE_W = 2.05, 1.4
 SIDEWALK_D, SIDEWALK_H = 1.9, 0.12
 ROAD_D, ROAD_START = 6.0, 7.7
 POLE = (8.6, 7.2, 8.0)  # x, y, height
@@ -176,8 +177,8 @@ def build_path(coll):
     """Paved approach from the gate to the porch step, then stepping stones wandering left
     along the garden front. The porch step itself already bridges most of the gap, so the
     approach is one slab; a stone trail under the step would just disappear beneath it."""
-    add_box(coll, "gate_apron", (1.70, 0.85, 0.05), (0.90, FRONT_Y - 0.44, 0.025), "stone")
-    stones = [(0.15, 5.00), (-0.65, 4.62), (-1.45, 4.32), (-2.25, 4.12)]
+    add_box(coll, "gate_apron", (1.70, 0.85, 0.05), (GATE_X, FRONT_Y - 0.44, 0.025), "stone")
+    stones = [(1.05, 4.92), (0.15, 4.60), (-0.85, 4.35), (-1.85, 4.15)]
     for k, (x, y) in enumerate(stones):
         size = 0.50 - (k % 2) * 0.05
         add_box(coll, f"path_stone_{k}", (size, size * 0.8, 0.05), (x, y, 0.025), "stone")
