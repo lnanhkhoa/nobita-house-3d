@@ -11,8 +11,10 @@ Origin = centre of the house footprint at ground level; the street is at +Y in B
 Run:  exec(open("scripts/blender/env_build.py").read())
 """
 
-import bpy
+import math
+
 import bmesh
+import bpy
 from mathutils import Vector
 
 # --- layout, mirrors src/data/scene.ts -------------------------------------------------
@@ -35,6 +37,10 @@ COLOURS = {
     "paving": (0.70, 0.68, 0.64, 1.0),
     "metal": (0.45, 0.45, 0.47, 1.0),
     "plate": (0.90, 0.89, 0.85, 1.0),
+    "mortar": (0.52, 0.50, 0.46, 1.0),
+    "pole_concrete": (0.68, 0.67, 0.64, 1.0),
+    "insulator": (0.88, 0.89, 0.87, 1.0),
+    "wire": (0.10, 0.10, 0.11, 1.0),
 }
 
 
@@ -76,17 +82,50 @@ def add_box(coll, name, size, location, mat_name):
     return obj
 
 
-def add_cylinder(coll, name, radius, depth, location, mat_name, verts=12):
+def add_cylinder(coll, name, radius, depth, location, mat_name, verts=12, radius_top=None,
+                 rot=None):
+    """Cylinder (optionally tapered) with its own local origin, so the final Y-flip stays valid."""
     mesh = bpy.data.meshes.new(name)
     obj = bpy.data.objects.new(name, mesh)
     coll.objects.link(obj)
     bm = bmesh.new()
     bmesh.ops.create_cone(bm, cap_ends=True, cap_tris=False, segments=verts,
-                          radius1=radius, radius2=radius, depth=depth)
+                          radius1=radius, radius2=radius_top if radius_top is not None else radius,
+                          depth=depth)
     bm.to_mesh(mesh)
     bm.free()
     obj.location = location
+    if rot:
+        obj.rotation_euler = rot
     obj.data.materials.append(material(mat_name, COLOURS[mat_name]))
+    return obj
+
+
+def add_wire(coll, name, span, location, sag=0.35, radius=0.014):
+    """Sagging cable along X: a low-poly polyline tube, local coords so the Y-flip stays valid."""
+    mesh = bpy.data.meshes.new(name)
+    obj = bpy.data.objects.new(name, mesh)
+    coll.objects.link(obj)
+    bm = bmesh.new()
+    steps = 10
+    rings = []
+    for i in range(steps + 1):
+        t = i / steps
+        x = -span / 2 + span * t
+        z = -sag * 4.0 * t * (1.0 - t)
+        ring = [bm.verts.new((x, -radius, z - radius)), bm.verts.new((x, radius, z - radius)),
+                bm.verts.new((x, radius, z + radius)), bm.verts.new((x, -radius, z + radius))]
+        rings.append(ring)
+    for a, b in zip(rings, rings[1:]):
+        for k in range(4):
+            bm.faces.new((a[k], a[(k + 1) % 4], b[(k + 1) % 4], b[k]))
+    bm.faces.new(rings[0])
+    bm.faces.new(list(reversed(rings[-1])))
+    bmesh.ops.recalc_face_normals(bm, faces=bm.faces)
+    bm.to_mesh(mesh)
+    bm.free()
+    obj.location = location
+    obj.data.materials.append(material("wire", COLOURS["wire"]))
     return obj
 
 
@@ -111,14 +150,60 @@ def build():
     add_box(coll, "wall_coping_right", (right_len, WALL_T + 0.06, 0.07),
             (half_w - right_len / 2, FRONT_Y, WALL_H + 0.035), "concrete_dark")
 
-    # breeze-block vent squares recessed into the front wall's top course
+    # Block coursing: recessed-looking mortar lines. Horizontal joints on every run,
+    # staggered vertical joints on the street-facing segments only.
+    course_h = 0.4
+    runs = [
+        ("front_l", (-half_w + left_len / 2, FRONT_Y), left_len, "x", True),
+        ("front_r", (half_w - right_len / 2, FRONT_Y), right_len, "x", True),
+        ("back", (0, back_y), LOT_W, "x", False),
+        ("left", (-half_w, FRONT_Y - half_d), LOT_D, "y", False),
+        ("right", (half_w, FRONT_Y - half_d), LOT_D, "y", False),
+    ]
+    for tag, (cx, cy), length, axis, stagger in runs:
+        for level in range(1, 4):
+            size = (length - 0.05, WALL_T + 0.016, 0.018) if axis == "x" else                    (WALL_T + 0.016, length - 0.05, 0.018)
+            add_box(coll, f"joint_h_{tag}_{level}", size, (cx, cy, course_h * level), "mortar")
+        if not stagger:
+            continue
+        for level in range(4):
+            offset = (course_h if level % 2 else 0.0)
+            n = int(length / 0.8)
+            for k in range(n + 1):
+                x = cx - length / 2 + offset + k * 0.8
+                if x < cx - length / 2 + 0.1 or x > cx + length / 2 - 0.1:
+                    continue
+                add_box(coll, f"joint_v_{tag}_{level}_{k}", (0.016, WALL_T + 0.014, course_h - 0.03),
+                        (x, cy, course_h * level + course_h / 2), "mortar")
+
+    # Breeze-block vents in the top course: recessed dark opening, thin frame, X-pattern insert.
     vent_y = FRONT_Y
+    vent_z = WALL_H - 0.32
     for i in range(-6, 7):
         x = i * 1.0
         if abs(x - GATE_X) < GATE_W / 2 + 0.4 or abs(x) > half_w - 0.3:
             continue
-        add_box(coll, f"wall_vent_{i}", (0.34, WALL_T + 0.02, 0.34), (x, vent_y, WALL_H - 0.32),
+        add_box(coll, f"vent_back_{i}", (0.34, WALL_T - 0.06, 0.34), (x, vent_y, vent_z),
                 "concrete_dark")
+        for tag, size, off in (("t", (0.40, WALL_T + 0.03, 0.035), (0, 0.183)),
+                               ("b", (0.40, WALL_T + 0.03, 0.035), (0, -0.183)),
+                               ("l", (0.035, WALL_T + 0.03, 0.40), (-0.183, 0)),
+                               ("r", (0.035, WALL_T + 0.03, 0.40), (0.183, 0))):
+            add_box(coll, f"vent_frame_{i}_{tag}", size, (x + off[0], vent_y, vent_z + off[1]),
+                    "concrete")
+        for sign, tag in ((1, "a"), (-1, "b")):
+            bar = add_box(coll, f"vent_cross_{i}_{tag}", (0.44, WALL_T + 0.02, 0.05),
+                          (x, vent_y, vent_z), "concrete")
+            bar.rotation_euler[1] = sign * math.radians(45)
+
+    # Reinforcing piers: at the corners and mid-run, with a small cap, like real block walls.
+    pier_positions = [(-half_w, FRONT_Y), (half_w, FRONT_Y), (-half_w, back_y), (half_w, back_y),
+                      (-3.7, FRONT_Y), (4.5, FRONT_Y)]
+    for index, (px, py) in enumerate(pier_positions):
+        add_box(coll, f"pier_{index}", (0.32, WALL_T + 0.12, WALL_H + 0.10),
+                (px, py, (WALL_H + 0.10) / 2), "concrete")
+        add_box(coll, f"pier_cap_{index}", (0.38, WALL_T + 0.18, 0.06),
+                (px, py, WALL_H + 0.13), "concrete_dark")
 
     # side + back walls
     add_box(coll, "wall_left", (WALL_T, LOT_D, WALL_H), (-half_w, FRONT_Y - half_d, WALL_H / 2), "concrete")
@@ -147,10 +232,38 @@ def build():
         add_box(coll, f"road_line_{i}", (1.6, 0.12, 0.02),
                 (i * 3.0, ROAD_START + ROAD_D / 2, 0.07), "plate")
 
-    # utility pole with a crossarm
-    add_cylinder(coll, "pole", 0.16, POLE[2], (POLE[0], POLE[1], POLE[2] / 2), "concrete_dark")
-    add_box(coll, "pole_arm", (1.5, 0.09, 0.09), (POLE[0], POLE[1], POLE[2] - 0.7), "metal")
-    add_box(coll, "pole_box", (0.4, 0.4, 0.6), (POLE[0], POLE[1] - 0.32, POLE[2] - 2.2), "metal")
+    # Japanese concrete utility pole: tapered shaft, two crossarms with insulators, a
+    # transformer drum, step bolts, and sagging lines running along the street.
+    px, py, ph = POLE
+    add_cylinder(coll, "pole", 0.15, ph, (px, py, ph / 2), "pole_concrete", verts=14,
+                 radius_top=0.09)
+    add_cylinder(coll, "pole_collar", 0.19, 0.5, (px, py, 0.25), "concrete_dark", verts=14)
+    add_cylinder(coll, "pole_cap", 0.10, 0.05, (px, py, ph + 0.025), "metal", verts=10)
+    # Crossarms sit perpendicular to the lines, which run along the road (X).
+    wire_rows = [(ph - 0.45, (-0.55, 0.0, 0.55)), (ph - 1.15, (-0.45, 0.45))]
+    for arm_index, (az, offsets) in enumerate(wire_rows):
+        add_box(coll, f"pole_arm_{arm_index}", (0.09, 1.45, 0.09), (px, py, az), "metal")
+        edge = (LOT_W + 8) / 2
+        for k, oy in enumerate(offsets):
+            add_cylinder(coll, f"pole_insulator_{arm_index}_{k}", 0.045, 0.14,
+                         (px, py + oy, az + 0.11), "insulator", verts=8)
+            long_span = px + edge
+            add_wire(coll, f"wire_{arm_index}_{k}_a", long_span,
+                     ((px - edge) / 2, py + oy, az + 0.18), sag=0.40)
+            short_span = edge - px
+            add_wire(coll, f"wire_{arm_index}_{k}_b", short_span,
+                     ((px + edge) / 2, py + oy, az + 0.18), sag=0.06)
+    # Transformer drum below the lower arm, hung on the road side of the shaft.
+    add_cylinder(coll, "pole_transformer", 0.24, 0.75, (px + 0.34, py, ph - 1.95), "metal",
+                 verts=12)
+    add_box(coll, "pole_transformer_strap", (0.55, 0.08, 0.08), (px + 0.17, py, ph - 1.70),
+            "metal")
+    # Step bolts alternating up the shaft.
+    for k in range(6):
+        side = 1 if k % 2 else -1
+        add_cylinder(coll, f"pole_step_{k}", 0.02, 0.28, (px, py + side * 0.16, 2.6 + k * 0.7),
+                     "metal", verts=6, rot=(math.radians(90), 0, 0))
+    add_box(coll, "pole_sign", (0.03, 0.22, 0.34), (px, py - 0.16, 2.1), "plate")
 
     # Blender is Z-up/Y-forward and the glTF exporter maps Blender +Y to glTF -Z, which would
     # put the street behind the house. Every primitive here is symmetric about its own Y axis,
