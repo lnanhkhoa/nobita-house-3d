@@ -16,11 +16,12 @@ export const layout = {
   /** Characters stand on the sidewalk slab, not the road surface. */
   standY: 0.12,
   road: { depth: 6, startZ: 7.7 },
-  /** Street trees. `height` drives the scale applied to whichever model loads. */
+  /** Yard trees. `height` drives the scale applied to whichever model loads. */
   trees: [
-    { position: [-5.4, 0, 2.6] as const, height: 5.2, radius: 2.1 },
-    { position: [5.6, 0, 3.4] as const, height: 4.6, radius: 1.9 },
-    { position: [-3.0, 0, -4.2] as const, height: 3.4, radius: 1.4 },
+    { position: [-5.4, 0, 2.6] as const, height: 5.2, radius: 2.1, kind: 'tree' as const },
+    { position: [5.6, 0, 3.4] as const, height: 4.6, radius: 1.9, kind: 'tree' as const },
+    { position: [-3.0, 0, -4.2] as const, height: 3.4, radius: 1.4, kind: 'tree' as const },
+    { position: [5.0, 0, -4.6] as const, height: 3.8, radius: 1.7, kind: 'sakura' as const },
   ],
   /** Clipped shrub rows inside the front wall; each row is spaced along X. */
   hedges: [

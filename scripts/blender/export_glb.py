@@ -1,24 +1,32 @@
-"""Export one Blender collection to GLB with the settings this project expects.
+"""Export one Blender collection, or a named set of objects, to GLB with the settings this
+project expects.
 
-Set COLLECTION and OUT_PATH before exec()-ing, e.g.
+Set COLLECTION (or OBJECTS) and OUT_PATH before exec()-ing, e.g.
 
     COLLECTION = "ENV"; OUT_PATH = "/abs/path/public/models/environment.glb"
+    exec(open("scripts/blender/export_glb.py").read())
+
+    OBJECTS = ["doraemon", "doraemon_rig"]; OUT_PATH = ".../assets/raw/final/characters/doraemon.glb"
     exec(open("scripts/blender/export_glb.py").read())
 """
 
 import bpy
 
 collection_name = globals().get("COLLECTION", "ENV")
+object_names = globals().get("OBJECTS")
 out_path = globals().get("OUT_PATH")
 if not out_path:
     raise ValueError("Set OUT_PATH before running export_glb.py")
 
-# Select only the target collection so the export ignores everything else in the file.
+# Select only the targets so the export ignores everything else in the file.
 bpy.ops.object.select_all(action="DESELECT")
-coll = bpy.data.collections[collection_name]
-for obj in coll.all_objects:
+if object_names:
+    targets = [bpy.data.objects[name] for name in object_names]
+else:
+    targets = list(bpy.data.collections[collection_name].all_objects)
+for obj in targets:
     obj.select_set(True)
-bpy.context.view_layer.objects.active = next(iter(coll.all_objects), None)
+bpy.context.view_layer.objects.active = targets[0] if targets else None
 
 bpy.ops.export_scene.gltf(
     filepath=out_path,
@@ -33,4 +41,4 @@ bpy.ops.export_scene.gltf(
     export_image_format="AUTO",
     export_draco_mesh_compression_enable=False,
 )
-print(f"exported {collection_name} -> {out_path}")
+print(f"exported {object_names or collection_name} -> {out_path}")

@@ -19,5 +19,6 @@ export const config = {
     characterDir: '/models/characters',
     tree: '/models/props/tree.glb',
     hedge: '/models/props/hedge.glb',
+    sakura: '/models/props/sakura.glb',
   },
 } as const;

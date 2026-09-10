@@ -14,7 +14,7 @@ Needs `GEMINI_API_KEY` in `.env`. Default model `gemini-2.5-flash-image` at 1K, 
 
 For a subject that needs more detail, override per run: `--model gemini-3-pro-image --size 2K`. That combination costs roughly an order of magnitude more per image, so use it deliberately. Add `--views front,left,back,three-quarter` if a back view is genuinely needed; Rodin reconstructs fine from three.
 
-Subjects: `doraemon`, `nobita`, `shizuka`, `jaian`, `suneo`, `house`, `tree`, `hedge`.
+Subjects: `doraemon`, `nobita`, `shizuka`, `jaian`, `suneo`, `house`, `tree`, `hedge`, `sakura`. Plants use a dedicated clay-sculpture style prompt and the Pro model: photoreal foliage reads as noise to image-to-3D and produced wrong objects on Rodin.
 
 ## 2. Image-to-3D on hyper3d.ai **(you)**
 
@@ -53,9 +53,11 @@ Trees and shrubs are the opposite case and **are** good Rodin candidates. They a
 Two layers, both honouring `prefers-reduced-motion`:
 
 - **Procedural idle** (`src/scene/use-character-motion.ts`): breathing bob with a matching squash, slow sway, hover lift. Phase-offset per character.
-- **Skeletal welcome bow** (`scripts/blender/rig_welcome.py`, user request 2026-09-10): each shipped GLB carries a four-bone torso chain (root / spine / chest / head) and one `welcome` clip — bow toward the street, hold, rise (48 frames at 24 fps). Vertices are weighted by smooth height bands instead of bone-heat, which is deterministic and exactly sufficient for a bow; it also works with every held prop and fist the sculpts arrived with, where a full Mixamo limb rig would fail. The app plays the clip once per selection and suppresses its procedural hop when the clip exists.
+- **Skeletal welcome bow** (`scripts/blender/rig_welcome.py`, user request 2026-09-10): each shipped GLB carries a vertical bone chain and one `welcome` clip — bow toward the street, hold, rise (48 frames at 24 fps). Vertices are weighted by smooth height bands instead of bone-heat, which is deterministic and exactly sufficient for a bow; it also works with every held prop and fist the sculpts arrived with, where a full Mixamo limb rig would fail. The app plays the clip once per selection and suppresses its procedural hop when the clip exists.
 
-The rig script is idempotent over its own output: re-running it on an already-rigged GLB strips the old armature, vertex groups and stale actions before rebuilding. Blender 5 note: `action.fcurves` is gone (layered actions); new keyframes default to bezier anyway.
+The chain is a per-character profile in the script. Humanoids get four bones (root / spine / chest / head, ~34° cumulative). Doraemon gets two (root / body, 18° at the hips): his head fills the top 55% of his height and any joint inside it kinks the sphere, and the ice-cream cone he holds runs from mouth to shin, so he bows as one rigid block with only the legs blending. The chain's pivot is the bounding-box centre of a thin slab at the first joint — never the vertex centroid, which the dense front-facing arms, face and props drag forward by a quarter metre on Doraemon.
+
+The rig script is idempotent over its own output: re-running it on an already-rigged GLB strips the old armature, vertex groups and stale actions before rebuilding. Export one character with `OBJECTS = ["<id>", "<id>_rig"]` in `export_glb.py`, then `bun run assets:build -- --in <dir-with-only-that-file> --out <tmp>` and copy the result into `public/models/characters/`, so the other characters' binaries stay untouched. Blender 5 note: `action.fcurves` is gone (layered actions); new keyframes default to bezier anyway.
 
 ## 5. Recolouring a texture
 

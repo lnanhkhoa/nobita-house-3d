@@ -32,6 +32,13 @@ const STYLE =
   '3D rendered CGI in the style of the "Stand By Me Doraemon" animated movie, smooth soft plastic-like shading, ' +
   'subtle subsurface skin, clean studio lighting, uniform pure white background (#FFFFFF), no floor shadow, no text, no watermark.';
 
+// Plants get their own style: the movie-CGI prefix drags foliage back to photoreal leaf
+// clusters, which image-to-3D cannot reconstruct. Clay-render wording keeps volumes solid.
+const PLANT_STYLE =
+  'Rendered as a smooth matte clay sculpture, soft studio lighting, uniform pure white background (#FFFFFF), ' +
+  'simple solid volumes exactly like a stop-motion prop, absolutely no fine leaf detail, no noise, ' +
+  'no floor shadow, no text, no watermark.';
+
 // Pose rules are what make the mesh usable for Mixamo auto-rig later.
 const CHARACTER_POSE =
   'Full body, whole figure visible with margin, centred, standing straight in a relaxed A-pose: arms held away from the body at about 40 degrees, ' +
@@ -88,6 +95,15 @@ const SUBJECTS = {
     description:
       'a single rounded evergreen garden shrub about eighty centimetres tall, dense small dark green leaves, ' +
       'neatly clipped into a soft dome, a few woody stems visible at the base, nothing else in frame',
+  },
+  sakura: {
+    kind: 'plant',
+    name: 'a stylized cartoon cherry blossom tree in full bloom, one single object',
+    description:
+      'a smooth sculpted 3D cartoon sakura tree like a wooden toy: one dark brown trunk leaning ' +
+      'slightly with two main branches, and a canopy of exactly four big smooth rounded solid ' +
+      'soft-pink blossom blobs merged together, completely solid matte surfaces with no ' +
+      'individual petals, no texture noise, no holes, no green leaves, nothing else in frame',
   },
   house: {
     kind: 'building',
@@ -166,7 +182,8 @@ function buildPrompt(subject, who, view, hasReference) {
   const consistency = hasReference
     ? 'Use the attached image as the exact same subject: identical colours, proportions, outfit and pose. Only the camera angle changes. '
     : '';
-  return `${consistency}${VIEW_TEXT[view]} Subject: ${who}. ${pose} ${STYLE}`;
+  const style = subject.kind === 'plant' ? PLANT_STYLE : STYLE;
+  return `${consistency}${VIEW_TEXT[view]} Subject: ${who}. ${pose} ${style}`;
 }
 
 async function callGemini(prompt, referencePng) {

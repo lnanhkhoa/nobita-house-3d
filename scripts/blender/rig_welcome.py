@@ -1,7 +1,7 @@
 """Rig one prepared character and give it a "welcome" bow animation.
 
 Works on the normalized GLBs in assets/raw/final/characters/ (feet at z=0, facing -Y,
-canon height). Builds a four-bone torso chain, weights vertices by smooth height bands —
+canon height). Builds a vertical bone chain, weights vertices by smooth height bands —
 deterministic, unlike bone-heat weighting, and exactly what a bow needs — then keys a
 single "welcome" action: bow forward, hold, rise.
 
@@ -23,11 +23,28 @@ char_id = globals()["CHAR_ID"]
 ROOT_DIR = "/Users/khoale/Devs/khoale/nobita-house-3d"
 SRC = f"{ROOT_DIR}/assets/raw/final/characters/{char_id}.glb"
 
-# Joint heights as fractions of body height, and blend half-width between bands.
-BANDS = (("root", 0.0, 0.45), ("spine", 0.45, 0.65), ("chest", 0.65, 0.82), ("head", 0.82, 1.0))
-BLEND = 0.04
-# Bow depth per joint in degrees; cumulative ~34 degrees at the head.
-BOW = {"spine": 13.0, "chest": 14.0, "head": 7.0}
+# Per-character chain. bands: (bone, low, high) as fractions of body height; the chain is
+# connected, so each bone's head is the joint the bow bends at. blend: cross-fade half-width
+# between bands. bow: degrees per joint at full depth.
+HUMANOID = {
+    "bands": (("root", 0.0, 0.45), ("spine", 0.45, 0.65), ("chest", 0.65, 0.82), ("head", 0.82, 1.0)),
+    "blend": 0.04,
+    "bow": {"spine": 13.0, "chest": 14.0, "head": 7.0},  # cumulative ~34 degrees at the head
+}
+PROFILES = {
+    # Doraemon is a sphere on a barrel: the head fills the top 55% and must never bend, and
+    # the ice-cream cone he holds runs from his mouth down to his shins, so any joint between
+    # them kinks it. He bows as one rigid block from the hips; only the stubby legs blend.
+    "doraemon": {
+        "bands": (("root", 0.0, 0.13), ("body", 0.13, 1.0)),
+        "blend": 0.05,
+        "bow": {"body": 18.0},
+    },
+}
+profile = PROFILES.get(char_id, HUMANOID)
+BANDS = profile["bands"]
+BLEND = profile["blend"]
+BOW = profile["bow"]
 FPS_KEYS = ((1, 0.0), (13, 1.0), (27, 1.0), (41, 0.0), (48, 0.0))  # frame, bow amount
 
 
@@ -77,12 +94,14 @@ bpy.context.view_layer.objects.active = mesh_obj
 bpy.ops.object.transform_apply(location=True, rotation=True, scale=True)
 
 height = mesh_obj.dimensions.z
-# The chain sits on the torso's own vertical axis, not the bounding-box centre: props held
-# in front (Doraemon's dorayaki) would otherwise drag the pivot forward.
-xs = [v.co.x for v in mesh_obj.data.vertices]
-ys = [v.co.y for v in mesh_obj.data.vertices]
-axis_x = sum(xs) / len(xs)
-axis_y = sum(ys) / len(ys)
+# The chain sits on the torso's own vertical axis, measured as the bounding-box centre of a
+# thin slab at the first bending joint. A vertex centroid is not usable here: densely
+# sculpted arms, faces and held props sit in front of the body and drag it forward (a
+# quarter metre on Doraemon), which then swings the whole back up during the bow.
+joint_z = BANDS[1][1] * height
+slab = [v.co for v in mesh_obj.data.vertices if abs(v.co.z - joint_z) <= BLEND * height]
+axis_x = (min(c.x for c in slab) + max(c.x for c in slab)) / 2
+axis_y = (min(c.y for c in slab) + max(c.y for c in slab)) / 2
 
 arm_data = bpy.data.armatures.new(f"{char_id}_rig")
 rig = bpy.data.objects.new(f"{char_id}_rig", arm_data)

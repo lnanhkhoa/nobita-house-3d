@@ -16,7 +16,11 @@ function jitter(seed: number) {
   return x - Math.floor(x);
 }
 
-function TreeProxy({ height, radius }: { height: number; radius: number }) {
+type TreeKind = 'tree' | 'sakura';
+
+const CANOPY: Record<TreeKind, string> = { tree: '#4E9A3B', sakura: '#F0A9BF' };
+
+function TreeProxy({ height, radius, kind }: { height: number; radius: number; kind: TreeKind }) {
   return (
     <group>
       <mesh castShadow position={[0, height * 0.25, 0]}>
@@ -25,7 +29,7 @@ function TreeProxy({ height, radius }: { height: number; radius: number }) {
       </mesh>
       <mesh castShadow position={[0, height * 0.5 + radius * 0.8, 0]}>
         <sphereGeometry args={[radius, 12, 10]} />
-        <meshStandardMaterial color="#4E9A3B" flatShading />
+        <meshStandardMaterial color={CANOPY[kind]} flatShading />
       </mesh>
     </group>
   );
@@ -81,17 +85,20 @@ function Tree({
   position,
   height,
   radius,
+  kind,
 }: {
   index: number;
   position: readonly [number, number, number];
   height: number;
   radius: number;
+  kind: TreeKind;
 }) {
   const yaw = jitter(index + 1) * Math.PI * 2;
   const size = 1 + (jitter(index + 7) - 0.5) * 0.16;
+  const url = kind === 'sakura' ? config.models.sakura : config.models.tree;
   return (
     <group position={position} rotation={[0, yaw, 0]}>
-      <ModelOrProxy url={config.models.tree} proxy={<TreeProxy height={height} radius={radius} />}>
+      <ModelOrProxy url={url} proxy={<TreeProxy height={height} radius={radius} kind={kind} />}>
         {(gltf) => <ScaledInstance gltf={gltf} target={height * size} />}
       </ModelOrProxy>
     </group>
@@ -122,6 +129,7 @@ export function Foliage() {
           position={tree.position}
           height={tree.height}
           radius={tree.radius}
+          kind={tree.kind}
         />
       ))}
       {shrubs.map((shrub) => (

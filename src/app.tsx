@@ -14,6 +14,7 @@ const modelUrls = [
   config.models.environment,
   config.models.tree,
   config.models.hedge,
+  config.models.sakura,
   ...characters.map((c) => `${config.models.characterDir}/${c.id}.glb`),
 ];
 
