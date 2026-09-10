@@ -46,7 +46,7 @@ The yard, wall, gate, street and utility pole come from `scripts/blender/env_bui
 
 Rodin is deliberately **not** used for the house. Image-to-3D reconstructs organic volumes; it rounds off the straight edges, flat wall planes and repeating tile courses that architecture depends on. `house_build.py` produces those directly: a hipped kawara apron and a street-facing gable for the silhouette, every opening cut 30 cm into its wall with a real frame, sill and glass, and a fine band of tile ribs, course lips, rafter tails, gutter brackets and 2-3 cm bevels. It exports at 82k triangles and 0.61 MB after optimisation.
 
-Trees and shrubs are the opposite case and **are** good Rodin candidates. They are not baked into the environment: `src/scene/foliage.tsx` places them per instance from `src/data/scene.ts`, so dropping `public/models/props/tree.glb` and `hedge.glb` in replaces the placeholders with no re-export. Each instance gets a deterministic yaw and a scale jitter so copies do not read as clones.
+Trees, hedge and the cherry blossom are procedural too (`scripts/blender/plants_build.py`, user decision 2026-09-10 after Rodin returned wrong objects for foliage). Canopies are metaballs — big lobes plus sunken bumps — converted to mesh so touching masses fuse with clay-like transitions, decimated to 3–8k triangles each; trunks are swept tapered tubes with a root flare. `src/scene/foliage.tsx` places instances from `src/data/scene.ts` with deterministic yaw and scale jitter, measuring model height in **world** space (meshopt quantisation moves the real scale onto the node, so geometry-space bounds are wrong).
 
 ## 4. Animation
 

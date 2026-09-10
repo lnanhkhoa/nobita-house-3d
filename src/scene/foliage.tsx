@@ -1,5 +1,5 @@
 import { useMemo } from 'react';
-import type { Group } from 'three';
+import { Box3, type Group } from 'three';
 import { config } from '../config';
 import { layout } from '../data/scene';
 import { type LoadedGltf, ModelOrProxy } from './model-or-proxy';
@@ -63,20 +63,11 @@ function Instance({ gltf, scale }: { gltf: LoadedGltf; scale: number }) {
 /** Scales a loaded model so its own height matches the placement's target height. */
 function useUnitScale(gltf: LoadedGltf, target: number) {
   return useMemo(() => {
-    // Geometry-space is close enough to world-space here: prep_character.py applies all
-    // transforms before export, so no clone or matrix update is needed just to measure.
-    let maxY = 0;
-    gltf.scene.traverse((node) => {
-      const mesh = node as {
-        isMesh?: boolean;
-        geometry?: { boundingBox?: { max: { y: number } }; computeBoundingBox: () => void };
-      };
-      if (!mesh.isMesh || !mesh.geometry) return;
-      if (!mesh.geometry.boundingBox) mesh.geometry.computeBoundingBox();
-      const top = mesh.geometry.boundingBox?.max.y ?? 0;
-      if (top > maxY) maxY = top;
-    });
-    return maxY > 0.01 ? target / maxY : 1;
+    // Measure in world space: meshopt quantisation stores positions in integer units and
+    // puts the real scale on the node, so geometry-space bounds are meaningless here.
+    const box = new Box3().setFromObject(gltf.scene);
+    const height = box.max.y - box.min.y;
+    return height > 0.01 ? target / height : 1;
   }, [gltf.scene, target]);
 }
 

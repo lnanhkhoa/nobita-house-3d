@@ -64,7 +64,7 @@ Phases 1 and 2 run first, in parallel. 3, 4, 5 overlap: web work continues on pr
 5. ✅ Loading veil with progress; credits line.
 6. ✅ `build`, `lint`, `typecheck`, `test` clean (bun).
 
-Outstanding: `public/models/props/{tree,hedge}.glb` from the user's Rodin credits; placeholders render meanwhile. Root README intentionally not created — repository rules forbid markdown outside `plans/`/`docs/` without an explicit request; run instructions live in `docs/tech-stack.md`.
+Foliage: built procedurally in Blender (`plants_build.py`) after Rodin failed on leaf detail; no outstanding assets. Root README intentionally not created — repository rules forbid markdown outside `plans/`/`docs/` without an explicit request; run instructions live in `docs/tech-stack.md`.
 
 ## Module contract
 
