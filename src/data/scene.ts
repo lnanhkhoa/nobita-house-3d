@@ -16,12 +16,27 @@ export const layout = {
   /** Characters stand on the sidewalk slab, not the road surface. */
   standY: 0.12,
   road: { depth: 6, startZ: 7.7 },
-  /** Yard trees. `height` drives the scale applied to whichever model loads. */
+  /**
+   * Bounding box of `house.glb`, porch included. It is the planting keep-out: a tree whose
+   * canopy would reach inside grows through the roof.
+   */
+  houseBounds: { minX: -4.84, maxX: 4.84, minZ: -4.25, maxZ: 5.45 },
+  /**
+   * Widest canopy radius each plant model reaches, as a fraction of the height it is scaled
+   * to. Measured from the exported GLBs and inflated by the +8% scale jitter `Foliage`
+   * applies per instance, so it is the worst case for any one tree.
+   */
+  canopyRatio: { tree: 0.55, sakura: 0.5 },
+  /**
+   * Yard trees. `height` drives the scale applied to whichever model loads, so keep every
+   * trunk at least `canopyRatio[kind] * height` away from `houseBounds` — the shed, gate and
+   * clothesline leave the four pockets used here. `radius` only sizes the proxy fallback.
+   */
   trees: [
-    { position: [-5.4, 0, 2.6] as const, height: 5.2, radius: 2.1, kind: 'tree' as const },
-    { position: [5.6, 0, 3.4] as const, height: 4.6, radius: 1.9, kind: 'tree' as const },
-    { position: [-3.0, 0, -4.2] as const, height: 3.4, radius: 1.4, kind: 'tree' as const },
-    { position: [5.0, 0, -4.6] as const, height: 3.8, radius: 1.7, kind: 'sakura' as const },
+    { position: [-6.7, 0, 3.0] as const, height: 3.3, radius: 1.3, kind: 'sakura' as const },
+    { position: [6.8, 0, 3.5] as const, height: 2.8, radius: 1.1, kind: 'tree' as const },
+    { position: [-6.8, 0, -2.0] as const, height: 3.2, radius: 1.3, kind: 'tree' as const },
+    { position: [6.7, 0, -6.5] as const, height: 4.8, radius: 1.9, kind: 'tree' as const },
   ],
   /** Clipped shrub rows inside the front wall; each row is spaced along X. */
   hedges: [

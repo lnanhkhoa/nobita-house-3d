@@ -130,6 +130,36 @@ const SUBJECTS = {
       'a flat close-up of grey-brown deciduous tree bark with vertical ridges and fissures, filling the ' +
       'entire frame edge to edge with no border, evenly lit with no shadows, tileable',
   },
+  'tile-stucco': {
+    kind: 'texture',
+    name: 'a seamless material tile',
+    description:
+      'a seamless tileable texture of cream-white exterior stucco plaster, fine sand grain, very light tone, low contrast, evenly lit, filling the entire frame edge to edge',
+  },
+  'tile-concrete': {
+    kind: 'texture',
+    name: 'a seamless material tile',
+    description:
+      'a seamless tileable texture of smooth light grey precast concrete with faint pores and subtle stains, very light tone, low contrast, evenly lit, filling the entire frame edge to edge',
+  },
+  'tile-asphalt': {
+    kind: 'texture',
+    name: 'a seamless material tile',
+    description:
+      'a seamless tileable texture of fine asphalt aggregate seen straight down, medium-light grey tone, low contrast, evenly lit, filling the entire frame edge to edge',
+  },
+  'tile-grass': {
+    kind: 'texture',
+    name: 'a seamless material tile',
+    description:
+      'a seamless tileable texture of a short mown lawn seen straight down, uniform fresh green, low contrast, evenly lit, no shadows, filling the entire frame edge to edge',
+  },
+  'tile-wood': {
+    kind: 'texture',
+    name: 'a seamless material tile',
+    description:
+      'a seamless tileable texture of light planed pine planks with vertical grain, pale tone, low contrast, evenly lit, filling the entire frame edge to edge',
+  },
   house: {
     kind: 'building',
     name: "Nobita's house from Doraemon",

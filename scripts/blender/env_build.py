@@ -28,6 +28,8 @@ ROAD_D, ROAD_START = 6.0, 7.7
 POLE = (8.6, 7.2, 8.0)  # x, y, height
 
 COLLECTION = "ENV"
+ROOT_DIR = "/Users/khoale/Devs/khoale/nobita-house-3d"
+exec(open(f"{ROOT_DIR}/scripts/blender/texture_lib.py").read())
 
 COLOURS = {
     "grass": (0.34, 0.58, 0.25, 1.0),
@@ -62,6 +64,8 @@ COLOURS = {
 
 def material(name, rgba, roughness=0.85):
     mat = bpy.data.materials.get(f"env_{name}")
+    if mat is None and name in TILES:
+        return tiled_material(f"env_{name}", rgba, roughness, *TILES[name])
     if mat is None:
         mat = bpy.data.materials.new(f"env_{name}")
         mat.use_nodes = True
@@ -432,6 +436,8 @@ def build():
     # Anything built after this loop would export mirrored, so it must stay last.
     for obj in coll.objects:
         obj.location.y = -obj.location.y
+    bpy.context.view_layer.update()
+    apply_world_uvs(coll.objects)
 
     print(f"ENV built: {len(coll.objects)} objects")
     return coll

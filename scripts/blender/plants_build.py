@@ -50,8 +50,10 @@ def image_node(mat, path, colorspace="sRGB"):
     return node
 
 
-def card_material(name, texture):
-    """Alpha-clipped, double-sided leaf/blossom card material with per-vertex tint."""
+def card_material(name, texture, glow=0.12):
+    """Alpha-clipped, double-sided leaf/blossom card material with per-vertex tint.
+    `glow` feeds the texture back in as faint emission so cards facing away from the sun
+    do not collapse to a muddy dark mass."""
     key = f"plant_{name}"
     mat = bpy.data.materials.get(key)
     if mat is not None:
@@ -62,6 +64,8 @@ def card_material(name, texture):
     bsdf = nt.nodes["Principled BSDF"]
     bsdf.inputs["Roughness"].default_value = 0.85
     tex = image_node(mat, f"{TEX_DIR}/{texture}.png")
+    nt.links.new(tex.outputs["Color"], bsdf.inputs["Emission Color"])
+    bsdf.inputs["Emission Strength"].default_value = glow
     tint = nt.nodes.new("ShaderNodeVertexColor")
     tint.layer_name = "Col"
     mix = nt.nodes.new("ShaderNodeMix")
@@ -320,7 +324,7 @@ def build_sakura(coll, seed=8, height=3.8):
     core = blob_mesh(coll, "sakura_canopy", elements, resolution=height * 0.024, mat_name="blossom",
                      target_tris=7000)
     scatter_cards(coll, "sakura_blossoms", core, count=380, size=height * 0.20,
-                  mat=card_material("blossomcard", "blossom-cluster"), rng=rng,
+                  mat=card_material("blossomcard", "blossom-cluster", glow=0.45), rng=rng,
                   tint_base=(1.0, 0.98, 0.98), tint_var=0.06)
 
 

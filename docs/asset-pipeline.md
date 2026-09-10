@@ -59,13 +59,23 @@ The chain is a per-character profile in the script. Humanoids get four bones (ro
 
 The rig script is idempotent over its own output: re-running it on an already-rigged GLB strips the old armature, vertex groups and stale actions before rebuilding. Export one character with `OBJECTS = ["<id>", "<id>_rig"]` in `export_glb.py`, then `bun run assets:build -- --in <dir-with-only-that-file> --out <tmp>` and copy the result into `public/models/characters/`, so the other characters' binaries stay untouched. Blender 5 note: `action.fcurves` is gone (layered actions); new keyframes default to bezier anyway.
 
-## 5. Recolouring a texture
+## 5. Surface textures
+
+`scripts/make-textures.py` produces every texture the builders use, into `assets/raw/textures/`:
+
+- **Leaf and blossom cards** are keyed from Gemini clusters (backdrop sampled from the corners, foreground colour bled into transparent texels). `plants_build.py` scatters hundreds of them tangent to each canopy, exported as `alphaMode: MASK` through a Greater Than node on the alpha socket (Blender 5 has no CLIP mode). Cards cast but do not receive shadows and carry faint emission so faces turned from the sun stay readable.
+- **Material tiles** (stucco, concrete, asphalt, grass, wood) are procedural wrapped fractal noise — seamless by construction — with mean luminance normalised to 0.8 so the palette colour that multiplies them still sets the hue. A Gemini source at `assets/ref/tile-*/front.png` is used instead when present. Gemini was rate-limited (429) on both models when the tiles were needed, which is why the procedural path exists.
+- **Normal maps** for bark and every tile come from a Sobel filter over luminance.
+
+`scripts/blender/texture_lib.py` is exec'd by both `env_build.py` and `house_build.py`: `TILES` maps palette colour names to a tile, a metres-per-repeat and a normal strength; `tiled_material` builds albedo × colour (exported as `baseColorTexture` × `baseColorFactor`) plus the normal map; `apply_world_uvs` box-projects UVs from world coordinates along each face's dominant axis after all geometry edits, so tiles run continuously across every part without unwrapping. Everything ships as WebP; total `public/models` is under 7 MB.
+
+## 6. Recolouring a texture
 
 Rodin does not always hit the canon palette. `scripts/recolor-character-texture.py` holds one rule table per character and rewrites only the measured HSV regions of the diffuse map, keeping the original shading. It reads the texture straight out of the raw GLB, so no manual extraction step exists.
 
 Applied so far: Gian (yellow shirt → orange, magenta stripe → cream, brown trousers → navy), Shizuka (blue skirt → red), Suneo (blue shirt → green, teal shorts → brown). To fix a future model, add a rule entry with gates measured from its hue histogram, run the script, and swap the image in Blender via `DIFFUSE_OVERRIDE` in `prep_character.py`.
 
-## 6. Optimise
+## 7. Optimise
 
 ```sh
 bun run assets:build   # gltf-transform: weld → simplify guard → resize textures → meshopt

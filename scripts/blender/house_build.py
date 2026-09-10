@@ -21,6 +21,8 @@ import bpy
 from mathutils import Euler, Vector
 
 COLLECTION = "HOUSE"
+ROOT_DIR = "/Users/khoale/Devs/khoale/nobita-house-3d"
+exec(open(f"{ROOT_DIR}/scripts/blender/texture_lib.py").read())
 
 # --- dimensions -----------------------------------------------------------------------
 GF = {"w": 8.4, "d": 7.2, "h": 2.75}          # ground floor
@@ -67,6 +69,8 @@ def material(name):
     mat = bpy.data.materials.get(f"house_{name}")
     if mat is not None:
         return mat
+    if name in TILES:
+        return tiled_material(f"house_{name}", COLOURS[name], ROUGHNESS.get(name, 0.82), *TILES[name])
     mat = bpy.data.materials.new(f"house_{name}")
     mat.use_nodes = True
     bsdf = mat.node_tree.nodes["Principled BSDF"]
@@ -664,6 +668,8 @@ def build_all():
     coll, parts, ground_wall = build()
     parts += build_porch(coll, ground_wall)
     apply_openings(coll)
+    bpy.context.view_layer.update()
+    apply_world_uvs(coll.objects)
     tris = 0
     for obj in coll.objects:
         obj.data.calc_loop_triangles()
