@@ -43,6 +43,17 @@ COLOURS = {
     "shed_wall": (0.42, 0.30, 0.18, 1.0),
     "shed_roof": (0.48, 0.16, 0.11, 1.0),
     "postbox": (0.62, 0.14, 0.10, 1.0),
+    "grass_dark": (0.28, 0.50, 0.20, 1.0),
+    "soil": (0.28, 0.20, 0.13, 1.0),
+    "leaf": (0.24, 0.52, 0.20, 1.0),
+    "bark": (0.30, 0.20, 0.12, 1.0),
+    "flower_red": (0.75, 0.15, 0.14, 1.0),
+    "flower_yellow": (0.88, 0.72, 0.18, 1.0),
+    "flower_white": (0.92, 0.91, 0.86, 1.0),
+    "appliance": (0.86, 0.87, 0.86, 1.0),
+    "laundry_a": (0.90, 0.92, 0.95, 1.0),
+    "laundry_b": (0.95, 0.83, 0.78, 1.0),
+    "pot": (0.52, 0.30, 0.20, 1.0),
     "pole_concrete": (0.68, 0.67, 0.64, 1.0),
     "insulator": (0.88, 0.89, 0.87, 1.0),
     "wire": (0.10, 0.10, 0.11, 1.0),
@@ -134,6 +145,19 @@ def add_wire(coll, name, span, location, sag=0.35, radius=0.014):
     return obj
 
 
+def add_sphere(coll, name, radius, location, mat_name, subdivisions=1):
+    mesh = bpy.data.meshes.new(name)
+    obj = bpy.data.objects.new(name, mesh)
+    coll.objects.link(obj)
+    bm = bmesh.new()
+    bmesh.ops.create_icosphere(bm, subdivisions=subdivisions, radius=radius)
+    bm.to_mesh(mesh)
+    bm.free()
+    obj.location = location
+    obj.data.materials.append(material(mat_name, COLOURS[mat_name]))
+    return obj
+
+
 def add_gable_prism(coll, name, size, location, mat_name):
     """Solid gable volume, ridge along X. The mesh is symmetric in local Y, which keeps it
     valid through the final Y-flip (mesh-internal Y offsets mirror; object locations do not)."""
@@ -196,6 +220,69 @@ def build_street_details(coll):
     for k in range(6):
         add_box(coll, f"zebra_{k}", (0.55, 0.85, 0.02),
                 (-9.0, ROAD_START + 0.75 + k * 1.0, 0.07), "plate")
+
+
+def build_yard_props(coll):
+    """Lived-in details around the house. Must run before the export Y-flip; every mesh is
+    symmetric about its own Y so only object locations mirror."""
+    # Clothesline between the house back and the shed: two T-poles, a pole, two towels.
+    for k, px in enumerate((-2.0, 1.5)):
+        add_cylinder(coll, f"laundry_post_{k}", 0.045, 1.70, (px, -5.2, 0.85), "metal", verts=8)
+        add_cylinder(coll, f"laundry_tee_{k}", 0.035, 0.70, (px, -5.2, 1.62), "metal", verts=6,
+                     rot=(0, math.radians(90), 0))
+    add_cylinder(coll, "laundry_pole", 0.025, 4.20, (-0.25, -5.2, 1.55), "wood", verts=6,
+                 rot=(0, math.radians(90), 0))
+    for k, (tx, mat) in enumerate(((-1.1, "laundry_a"), (0.15, "laundry_b"), (0.8, "laundry_a"))):
+        add_box(coll, f"laundry_towel_{k}", (0.55, 0.025, 0.48), (tx, -5.2, 1.29), mat)
+
+    # Bonsai bench beside the porch — Nobita's dad's pride.
+    add_box(coll, "bonsai_bench", (1.60, 0.50, 0.10), (4.85, 4.45, 0.42), "wood")
+    for k, lx in enumerate((-0.55, 0.0, 0.55)):
+        add_box(coll, f"bonsai_leg_{k}", (0.08, 0.42, 0.42), (4.85 + lx, 4.45, 0.21), "wood")
+    for k, lx in enumerate((-0.5, 0.05, 0.55)):
+        add_cylinder(coll, f"bonsai_pot_{k}", 0.14, 0.14, (4.85 + lx, 4.45, 0.54), "pot", verts=10)
+        add_cylinder(coll, f"bonsai_trunk_{k}", 0.03, 0.22, (4.85 + lx, 4.45, 0.70), "bark", verts=6)
+        add_sphere(coll, f"bonsai_top_{k}", 0.16 + 0.03 * (k % 2), (4.85 + lx, 4.45, 0.88), "leaf")
+
+    # Garden tap with basin and bucket, near the stepping stones.
+    add_box(coll, "tap_post", (0.12, 0.12, 0.78), (-5.6, 2.0, 0.39), "concrete_dark")
+    add_cylinder(coll, "tap_spout", 0.025, 0.22, (-5.6, 2.16, 0.68), "metal", verts=6,
+                 rot=(math.radians(90), 0, 0))
+    add_box(coll, "tap_basin", (0.55, 0.45, 0.16), (-5.6, 2.35, 0.08), "concrete")
+    add_cylinder(coll, "tap_bucket", 0.14, 0.24, (-5.05, 2.25, 0.12), "postbox", verts=10)
+
+    # Machinery against the walls: AC outdoor unit (left), water heater (right).
+    add_box(coll, "ac_unit", (0.36, 0.85, 0.62), (-4.42, 1.0, 0.36), "appliance")
+    add_box(coll, "ac_grille", (0.04, 0.55, 0.44), (-4.61, 1.0, 0.38), "metal")
+    add_box(coll, "heater", (0.40, 0.55, 0.95), (4.44, -1.4, 0.48), "appliance")
+    add_cylinder(coll, "heater_flue", 0.045, 0.30, (4.44, -1.4, 1.10), "metal", verts=8)
+
+    # Stone lantern in the back corner of the garden.
+    add_cylinder(coll, "lantern_base", 0.24, 0.22, (6.3, -5.9, 0.11), "concrete_dark", verts=10)
+    add_cylinder(coll, "lantern_column", 0.11, 0.55, (6.3, -5.9, 0.50), "concrete", verts=8)
+    add_box(coll, "lantern_house", (0.34, 0.34, 0.28), (6.3, -5.9, 0.92), "concrete_dark")
+    mesh_cone = add_cylinder(coll, "lantern_cap", 0.30, 0.22, (6.3, -5.9, 1.17), "concrete",
+                             verts=8, radius_top=0.05)
+    add_sphere(coll, "lantern_tip", 0.06, (6.3, -5.9, 1.32), "concrete_dark")
+
+    # Flower bed along the inside of the front wall, left of the gate.
+    add_box(coll, "flowerbed_soil", (3.2, 0.5, 0.14), (-4.6, 5.30, 0.07), "soil")
+    palette = ("flower_red", "flower_yellow", "flower_white", "flower_red", "flower_yellow",
+               "flower_white", "flower_red", "flower_yellow")
+    for k, mat in enumerate(palette):
+        fx = -6.0 + k * 0.40
+        add_sphere(coll, f"flower_leaf_{k}", 0.11, (fx, 5.30, 0.16), "leaf")
+        add_sphere(coll, f"flower_{k}", 0.07, (fx, 5.30, 0.28), mat)
+
+    # Gravel drainage band hugging the house base on the non-street sides.
+    add_box(coll, "gravel_left", (0.35, 7.2, 0.03), (-4.42, 0.0, 0.015), "stone")
+    add_box(coll, "gravel_right", (0.35, 7.2, 0.03), (4.42, 0.0, 0.015), "stone")
+    add_box(coll, "gravel_back", (9.2, 0.35, 0.03), (0.0, -3.78, 0.015), "stone")
+
+    # Mottled lawn: flat darker patches so the grass stops reading as one flat sheet.
+    for k, (gx, gy, r) in enumerate(((-3.0, 1.5, 1.2), (2.5, -2.0, 1.0), (-5.0, -3.5, 1.4),
+                                     (5.5, 1.0, 0.9), (0.5, -6.3, 1.1), (-6.3, 0.2, 0.8))):
+        add_cylinder(coll, f"lawn_patch_{k}", r, 0.012, (gx, gy, 0.006), "grass_dark", verts=14)
 
 
 def build():
@@ -337,6 +424,7 @@ def build():
     build_shed(coll)
     build_path(coll)
     build_street_details(coll)
+    build_yard_props(coll)
 
     # Blender is Z-up/Y-forward and the glTF exporter maps Blender +Y to glTF -Z, which would
     # put the street behind the house. Every primitive here is symmetric about its own Y axis,

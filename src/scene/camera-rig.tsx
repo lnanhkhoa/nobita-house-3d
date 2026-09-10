@@ -74,6 +74,12 @@ export function CameraRig() {
       minPolarAngle={config.camera.minPolarAngle}
       maxPolarAngle={config.camera.maxPolarAngle}
       smoothTime={0.35}
+      // Lower sensitivity plus a longer dragging smooth time makes the view ease
+      // in and out of a drag, reading as acceleration rather than a 1:1 snap.
+      azimuthRotateSpeed={0.55}
+      polarRotateSpeed={0.55}
+      truckSpeed={0.8}
+      draggingSmoothTime={0.28}
       boundaryFriction={0.2}
       onChange={() => {
         // Keep the orbit target inside the lot so the user cannot pan away from the diorama.
