@@ -34,8 +34,8 @@ export function Scene() {
       </mesh>
       <House />
       <Environment />
-      {characters.map((def) => (
-        <Character key={def.id} def={def} />
+      {characters.map((def, index) => (
+        <Character key={def.id} def={def} index={index} />
       ))}
     </>
   );

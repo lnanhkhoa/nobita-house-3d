@@ -1,16 +1,25 @@
-# Phase 4 — Character pipeline: Rodin → Blender → Mixamo → GLB
+# Phase 4 — Character pipeline: Rodin → Blender → GLB
 
-## Per character (×5)
-1. **Import** `assets/raw/<id>.glb` in Blender (MCP). Decimate to ≤ 30k tris, keep UVs, bake nothing (Rodin ships albedo).
-2. **Normalize**: feet on z=0, facing -Y (Blender) so it faces +Z in glTF; scale to canon height (Doraemon 1.29 m, Nobita 1.40, Shizuka 1.38, Jaian 1.57, Suneo 1.35); apply transforms.
-3. **Pose check**: arms must be away from body. If Rodin produced arms-down, fix with proportional edit / simple bone pose in Blender (fallback documented).
-4. **Export** `assets/raw/mixamo-in/<id>.fbx` (mesh + textures embedded, no armature).
-5. **User**: upload to mixamo.com → Auto-Rigger (place markers) → download **T-pose** FBX (with skin), then animations **Idle** (Breathing Idle) and **Waving** (with skin, 30 fps, no keyframe reduction). Save to `assets/raw/mixamo-out/<id>/{tpose,idle,wave}.fbx`.
-6. **Merge** (`scripts/blender/merge_mixamo.py`): import tpose; import idle & wave as actions; push to NLA as `idle`, `wave`; rename bones prefix stripping `mixamorig:`; export `public/models/characters/<id>.glb` with animations.
-7. `npm run assets:build` (meshopt; skinning-safe).
+**Done 2026-09-10.** Rigging was dropped; see `docs/asset-pipeline.md` for the runbook.
 
-## Fallback (Doraemon or any failed rig)
-`character.tsx` supports `animationMode: 'rig' | 'procedural'`; procedural = sin bob + arm-pivot rotation on a named sub-mesh (or whole body tilt).
+## What shipped
 
-## Validation
-Each GLB has 2 clips; plays in app; skin weights not exploding; file ≤ 4 MB.
+| Character | Source file | Height | Triangles | Optimised GLB |
+|---|---|---|---|---|
+| Doraemon | `base_basic_pbr.glb` | 1.29 m | 40k | 3.45 MB |
+| Nobita | `base_basic_pbr.glb` | 1.40 m | 40k | 2.88 MB |
+| Shizuka | `base_basic_pbr.glb` | 1.38 m | 40k | 3.13 MB |
+| Gian | `lod_basic_pbr.fbx` (LOD2) | 1.57 m | 50k | 2.83 MB |
+| Suneo | `base_basic_pbr.glb` | 1.35 m | 40k | 3.15 MB |
+
+## Decisions taken during the phase
+
+- **No Mixamo.** The sculpts are posed (Gian mid-flex, Doraemon holding a dorayaki) and carry no skin. Auto-rigging needs arms clear of the body and open hands. Procedural motion in `src/scene/use-character-motion.ts` replaces it.
+- **Gian recoloured, not regenerated.** `scripts/recolor-gian-texture.py` remaps the diffuse map in HSV: yellow shirt → canon orange, magenta stripe → cream, brown trousers → navy. Skin, hair and shoes are excluded by the saturation and value gates. Costs nothing and keeps the sculpt.
+- **Gian's FBX carried a full LOD ladder** (200k / 100k / 50k / 25k / 12.5k), so LOD2 is used directly instead of decimating.
+- The folder originally named `gian` held a second copy of Shizuka; the user replaced it.
+
+## Left open
+
+- Shizuka's skirt is blue, canon is red. Suneo's shirt is blue, canon is green. Same recolour technique would fix both.
+- 421k triangles on screen, above the 300k target in the plan. Not a measured problem yet; drop to a lower LOD if mobile frame time suffers.

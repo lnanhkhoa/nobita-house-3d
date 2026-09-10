@@ -1,5 +1,5 @@
 // Generate multi-view 2D reference images with Gemini for manual Hyper3D Rodin image-to-3D.
-// Usage: bun scripts/gen-ref-images.mjs --subject doraemon [--model gemini-3-pro-image] [--views front,left,back,three-quarter]
+// Usage: bun scripts/gen-ref-images.mjs --subject doraemon [--model gemini-3-pro-image] [--size 2K] [--views front,left,three-quarter]
 //        bun scripts/gen-ref-images.mjs --all
 // Output: assets/ref/<subject>/<view>.png. The front view is generated first and then fed back as a
 // reference image so the other views stay consistent (same colours, proportions, pose).
@@ -18,8 +18,13 @@ if (!apiKey) {
 }
 
 const args = parseArgs(process.argv.slice(2));
-const MODEL = args.model ?? 'gemini-3-pro-image';
-const VIEWS = (args.views ?? 'front,left,back,three-quarter').split(',');
+// Flash at 1K is roughly an order of magnitude cheaper than the Pro image model at 2K and is
+// still plenty for Rodin's image-to-3D input. Override with --model / --size when a subject
+// needs more detail.
+const MODEL = args.model ?? 'gemini-2.5-flash-image';
+// Three views are enough for Rodin multi-view; the back adds cost without adding silhouette info.
+const VIEWS = (args.views ?? 'front,left,three-quarter').split(',');
+const IMAGE_SIZE = args.size ?? '1K';
 const FORCE = Boolean(args.force);
 
 // Shared style prefix keeps all subjects in one visual family.
@@ -149,7 +154,8 @@ async function callGemini(prompt, referencePng) {
   if (referencePng)
     parts.push({ inlineData: { mimeType: 'image/png', data: referencePng.toString('base64') } });
   const config = { responseModalities: ['IMAGE', 'TEXT'], imageConfig: { aspectRatio: '1:1' } };
-  if (MODEL.includes('pro-image') || MODEL.includes('banana-pro')) config.imageConfig.imageSize = '2K';
+  // Only the Pro/Nano-Banana-Pro image models accept an explicit imageSize.
+  if (MODEL.includes('pro-image') || MODEL.includes('banana-pro')) config.imageConfig.imageSize = IMAGE_SIZE;
 
   for (let attempt = 1; attempt <= 4; attempt++) {
     try {
