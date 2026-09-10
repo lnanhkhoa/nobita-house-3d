@@ -1,21 +1,27 @@
-# Phase 3 — Blender: environment build + house cleanup
+# Phase 3 — Blender: environment and house
 
-## Context
-Blender 5.2.1 via MCP. Scripts stored in `scripts/blender/` and executed through `execute_blender_code` so results are reproducible.
+**Done 2026-09-10.**
 
-## Requirements
-- `env_build.py`: ground slab, road + kerb + white line, concrete block wall with breeze-block vents (array modifier), gate posts + wooden gate + nameplate "野比", utility pole + wires (curves), simple shrubs (icospheres w/ displacement) — all under a `ENV` collection, origin at lot centre, +Y up on export.
-- Trees: `search_polyhaven_assets` / `search_polypizza_models` for low-poly deciduous trees; import 2, place L and R of house per hero image.
-- `house_cleanup.py`: import `assets/raw/house.glb`, Decimate to ≤ 60k tris, recenter pivot to ground bbox centre, scale to 8 m footprint width, apply transforms, rename `House`.
-- Export `public/models/house.glb`, `public/models/environment.glb` (glTF, +Y up, Draco off, textures ≤ 2048, meshopt via `scripts/build-assets.mjs`).
+## What shipped
 
-## Steps
-1. Build env procedurally; screenshot via MCP; iterate against `nobita_house_isometric_view.png`.
-2. When house GLB arrives: cleanup → export.
-3. `npm run assets:build`.
+| Script | Builds | Triangles | Optimised GLB |
+|---|---|---|---|
+| `scripts/blender/env_build.py` | yard, block wall with vents, gate and nameplate, sidewalk, kerb, road with markings, utility pole | ~4k | 0.01 MB |
+| `scripts/blender/house_build.py` | the whole house | 82k | 0.61 MB |
 
-## Validation
-Both GLBs load in the app replacing proxies; tri count and file size in budget; viewport screenshot matches reference massing.
+## House detail, against the hero detail ladder
 
-## Rollback
-Delete exported GLBs → proxies return.
+- **Silhouette**: hipped kawara apron over the ground floor, a street-facing gable over the set-back upper storey, an entrance porch gable projecting into the yard, and eave overhangs on every run. Four profile events, above the two-to-four target.
+- **Medium**: every opening is cut 30 cm into its wall by boolean, then filled with an outer frame, meeting mullions, glass, a projecting sill and a dark interior backing. Four windows, a louvred storm shutter, a planked front door.
+- **Fine**: kawara rib profile and per-course lips generated parametrically across each roof patch, ridge caps with rounded ends, barge boards, fascia, soffit, exposed rafter tails every 46 cm, half-round gutters with brackets, two downpipes with clips, a gable vent, porch lamp and nameplate. Hard edges bevelled 2-3 cm.
+
+## Rodin was not used here
+
+Image-to-3D rounds edges and cannot hold a flat wall plane or a repeating tile course. Procedural geometry gives sharper results at a fraction of the triangle count. Trees and shrubs are the opposite case and were split out of the environment so Rodin models can replace them per instance.
+
+## Bugs worth remembering
+
+- `box()` bakes its translation into the mesh, so setting `rotation_euler` afterwards spins the part about the **world origin**, not its own centre. Shutter slats and side windows both flew off the building this way. Rotation now happens inside bmesh, before the translation.
+- A solid "reveal" box filling the window niche hid the frame and glass completely. Replaced by a thin interior backing panel.
+- `bmesh.ops.scale` on a cone scales its length along Z, not its cross-section, which stretched every ridge cap into a plank.
+- Looking a wall up by name found a leftover object from an earlier run that silently absorbed every boolean. Cutters now hold the object reference.

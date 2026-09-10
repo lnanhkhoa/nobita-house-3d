@@ -1,5 +1,8 @@
 """Build the yard, block wall, gate, sidewalk, road and utility pole for the Nobita house diorama.
 
+Trees and shrubs are deliberately absent: they are placed per instance by the web app from
+`src/data/scene.ts`, so a Hyper3D Rodin tree can replace the placeholder without a re-export.
+
 Runs inside Blender. Everything is created in a fresh "ENV" collection so the rest of the
 user's scene is untouched. Units are metres, Blender Z-up (glTF export converts to Y-up).
 Origin = centre of the house footprint at ground level; the street is at +Y in Blender
@@ -25,9 +28,6 @@ COLLECTION = "ENV"
 
 COLOURS = {
     "grass": (0.34, 0.58, 0.25, 1.0),
-    "leaf": (0.22, 0.50, 0.18, 1.0),
-    "leaf_light": (0.32, 0.62, 0.24, 1.0),
-    "bark": (0.30, 0.20, 0.12, 1.0),
     "concrete": (0.74, 0.71, 0.66, 1.0),
     "concrete_dark": (0.60, 0.58, 0.54, 1.0),
     "wood": (0.55, 0.34, 0.16, 1.0),
@@ -88,55 +88,6 @@ def add_cylinder(coll, name, radius, depth, location, mat_name, verts=12):
     obj.location = location
     obj.data.materials.append(material(mat_name, COLOURS[mat_name]))
     return obj
-
-
-def add_sphere(coll, name, radius, location, mat_name, subdivisions=2):
-    mesh = bpy.data.meshes.new(name)
-    obj = bpy.data.objects.new(name, mesh)
-    coll.objects.link(obj)
-    bm = bmesh.new()
-    bmesh.ops.create_icosphere(bm, subdivisions=subdivisions, radius=radius)
-    bm.to_mesh(mesh)
-    bm.free()
-    obj.location = location
-    obj.data.materials.append(material(mat_name, COLOURS[mat_name]))
-    return obj
-
-
-def add_tree(coll, name, location, height, canopy_radius):
-    """Stylized tree: tapered trunk plus three overlapping faceted canopy blobs."""
-    x, y = location
-    trunk_h = height * 0.45
-    add_cylinder(coll, f"{name}_trunk", 0.16, trunk_h, (x, y, trunk_h / 2), "bark", verts=8)
-    blobs = (
-        (0.0, 0.0, trunk_h + canopy_radius * 0.75, canopy_radius, "leaf"),
-        (-canopy_radius * 0.5, canopy_radius * 0.2, trunk_h + canopy_radius * 1.25,
-         canopy_radius * 0.72, "leaf_light"),
-        (canopy_radius * 0.48, -canopy_radius * 0.25, trunk_h + canopy_radius * 1.05,
-         canopy_radius * 0.66, "leaf"),
-    )
-    for i, (dx, dy, z, r, mat) in enumerate(blobs):
-        add_sphere(coll, f"{name}_canopy_{i}", r, (x + dx, y + dy, z), mat)
-
-
-def add_hedge(coll, name, location, length, height=0.7):
-    """Row of overlapping low spheres reading as a clipped shrub row."""
-    x, y = location
-    count = max(2, int(length / 0.6))
-    for i in range(count):
-        t = (i / (count - 1)) - 0.5
-        add_sphere(coll, f"{name}_{i}", height * 0.62,
-                   (x + t * length, y, height * 0.5), "leaf_light", subdivisions=1)
-
-
-def build_foliage(coll):
-    # Two street trees flanking the house, matching the reference photo composition.
-    add_tree(coll, "tree_left", (-5.4, 2.6), 5.2, 2.0)
-    add_tree(coll, "tree_right", (5.6, 3.4), 4.6, 1.8)
-    # Shrubs along the inside of the front wall and beside the gate.
-    add_hedge(coll, "hedge_left", (-4.2, FRONT_Y - 0.75), 4.4)
-    add_hedge(coll, "hedge_right", (4.6, FRONT_Y - 0.75), 2.6)
-    add_tree(coll, "tree_back", (-3.0, -4.2), 3.4, 1.3)
 
 
 def build():
@@ -200,8 +151,6 @@ def build():
     add_cylinder(coll, "pole", 0.16, POLE[2], (POLE[0], POLE[1], POLE[2] / 2), "concrete_dark")
     add_box(coll, "pole_arm", (1.5, 0.09, 0.09), (POLE[0], POLE[1], POLE[2] - 0.7), "metal")
     add_box(coll, "pole_box", (0.4, 0.4, 0.6), (POLE[0], POLE[1] - 0.32, POLE[2] - 2.2), "metal")
-
-    build_foliage(coll)
 
     # Blender is Z-up/Y-forward and the glTF exporter maps Blender +Y to glTF -Z, which would
     # put the street behind the house. Every primitive here is symmetric about its own Y axis,

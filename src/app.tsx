@@ -12,6 +12,8 @@ import { LoadingVeil } from './ui/loading-veil';
 const modelUrls = [
   config.models.house,
   config.models.environment,
+  config.models.tree,
+  config.models.hedge,
   ...characters.map((c) => `${config.models.characterDir}/${c.id}.glb`),
 ];
 

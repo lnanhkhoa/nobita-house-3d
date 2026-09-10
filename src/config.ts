@@ -17,5 +17,7 @@ export const config = {
     house: '/models/house.glb',
     environment: '/models/environment.glb',
     characterDir: '/models/characters',
+    tree: '/models/props/tree.glb',
+    hedge: '/models/props/hedge.glb',
   },
 } as const;

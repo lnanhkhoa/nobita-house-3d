@@ -4,6 +4,7 @@ import { useAppStore } from '../state/store';
 import { CameraRig } from './camera-rig';
 import { Character } from './character';
 import { Environment } from './environment';
+import { Foliage } from './foliage';
 import { House } from './house';
 import { Lighting } from './lighting';
 
@@ -34,6 +35,7 @@ export function Scene() {
       </mesh>
       <House />
       <Environment />
+      <Foliage />
       {characters.map((def, index) => (
         <Character key={def.id} def={def} index={index} />
       ))}

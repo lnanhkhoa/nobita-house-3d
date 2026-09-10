@@ -74,6 +74,21 @@ const SUBJECTS = {
       'a short slim ten-year-old Japanese boy with black hair swept into a pointed swoop, narrow eyes, small pointed mouth, ' +
       'wearing a green long-sleeve shirt, brown shorts, white socks and yellow shoes',
   },
+  tree: {
+    kind: 'plant',
+    name: 'a Japanese suburban street tree',
+    description:
+      'a single small deciduous broadleaf tree about five metres tall, one straight grey-brown trunk that ' +
+      'splits into four or five main branches, a rounded dense canopy of bright fresh green leaves, ' +
+      'no flowers, no fruit, roots hidden, nothing else in frame',
+  },
+  hedge: {
+    kind: 'plant',
+    name: 'a clipped garden shrub',
+    description:
+      'a single rounded evergreen garden shrub about eighty centimetres tall, dense small dark green leaves, ' +
+      'neatly clipped into a soft dome, a few woody stems visible at the base, nothing else in frame',
+  },
   house: {
     kind: 'building',
     name: "Nobita's house from Doraemon",
@@ -142,7 +157,12 @@ async function generateView(subject, view, referencePng) {
 }
 
 function buildPrompt(subject, who, view, hasReference) {
-  const pose = subject.kind === 'character' ? CHARACTER_POSE : 'Whole building visible with margin, centred.';
+  const pose =
+    subject.kind === 'character'
+      ? CHARACTER_POSE
+      : subject.kind === 'plant'
+        ? 'The whole plant visible with margin, centred, upright, perfectly symmetrical lighting so no side is in deep shadow.'
+        : 'Whole building visible with margin, centred.';
   const consistency = hasReference
     ? 'Use the attached image as the exact same subject: identical colours, proportions, outfit and pose. Only the camera angle changes. '
     : '';

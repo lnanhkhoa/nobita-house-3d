@@ -48,7 +48,7 @@ Interior rooms, dollhouse toggles, editor mode, i18n, mobile-first chrome from o
 |---|---|---|---|---|
 | 1 | [Foundation scaffold + proxy scene](phase-01-foundation-scaffold.md) | — | me | **done** |
 | 2 | [Reference image generation (Gemini) + Rodin handoff](phase-02-reference-images.md) | — | me → user | **done** — defaults moved to Flash 1K, three views |
-| 3 | [Blender: environment build + house cleanup](phase-03-blender-environment.md) | 2 (house GLB) | me (MCP) | **environment done**, house cleanup waits on the Rodin GLB |
+| 3 | [Blender: environment and house](phase-03-blender-environment.md) | — | me (MCP) | **done** — both built procedurally; Rodin not used for architecture |
 | 4 | [Character pipeline: Rodin → Blender → GLB](phase-04-character-pipeline.md) | 2 (character GLBs) | me ↔ user | **done** — all 5 shipped, Gian recoloured to canon |
 | 5 | [Web app: scene, animation, interaction, UI](phase-05-web-app.md) | 1; assets from 3, 4 arrive incrementally | me | **done** |
 | 6 | [Perf, polish, docs](phase-06-perf-polish-docs.md) | 3, 4, 5 | me | pending |
@@ -84,7 +84,7 @@ public/models/*.glb        optimized, committed
 |---|---|
 | Rodin character mesh not in T/A-pose → Mixamo auto-rig fails | Reference images explicitly prompt A-pose, arms away from body, feet apart; Phase 4 has a Blender pose-fix fallback |
 | ~~Doraemon rigs badly in Mixamo~~ | Resolved by dropping rigging entirely; all characters use procedural motion |
-| Rodin house has fused windows/roof, no clean pivot | Decimate + only need silhouette; Blender fixes pivot to ground centre |
+| ~~Rodin house has fused windows/roof~~ | Resolved by not using Rodin for the house at all; `house_build.py` models it procedurally |
 | 600k-tri Rodin meshes ×6 | Decimate to ≤ 30k per character, ≤ 60k house in Blender before export |
 | Gemini image style drift between characters | One shared style prefix + same seed-like phrasing; generate a contact sheet first for user approval |
 | Poly Haven and Poly Pizza integrations are disabled in the Blender addon | Trees and shrubs are built procedurally in `scripts/blender/env_build.py` instead; no external asset dependency |

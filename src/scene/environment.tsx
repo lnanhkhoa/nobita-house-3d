@@ -2,7 +2,7 @@ import { config } from '../config';
 import { layout } from '../data/scene';
 import { ModelOrProxy } from './model-or-proxy';
 
-const { lot, wall, sidewalk, road, trees, pole } = layout;
+const { lot, wall, sidewalk, road, pole } = layout;
 const CONCRETE = '#C9C2B6';
 const GRASS = '#7FB25A';
 const ASPHALT = '#4C4F55';
@@ -61,19 +61,6 @@ function EnvironmentProxy() {
         <boxGeometry args={[lot.width, h, t]} />
         <meshStandardMaterial color={CONCRETE} />
       </mesh>
-      {/* trees */}
-      {trees.map((tree) => (
-        <group key={`${tree.position[0]}-${tree.position[2]}`} position={tree.position}>
-          <mesh castShadow position={[0, tree.height * 0.25, 0]}>
-            <cylinderGeometry args={[0.16, 0.24, tree.height * 0.5, 8]} />
-            <meshStandardMaterial color="#6B4A2B" />
-          </mesh>
-          <mesh castShadow position={[0, tree.height * 0.5 + tree.radius * 0.8, 0]}>
-            <sphereGeometry args={[tree.radius, 12, 10]} />
-            <meshStandardMaterial color="#4E9A3B" />
-          </mesh>
-        </group>
-      ))}
       {/* utility pole */}
       <mesh castShadow position={[pole.position[0], pole.height / 2, pole.position[2]]}>
         <cylinderGeometry args={[0.14, 0.18, pole.height, 10]} />

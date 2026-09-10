@@ -14,7 +14,7 @@ Needs `GEMINI_API_KEY` in `.env`. Default model `gemini-2.5-flash-image` at 1K, 
 
 For a subject that needs more detail, override per run: `--model gemini-3-pro-image --size 2K`. That combination costs roughly an order of magnitude more per image, so use it deliberately. Add `--views front,left,back,three-quarter` if a back view is genuinely needed; Rodin reconstructs fine from three.
 
-Subjects: `doraemon`, `nobita`, `shizuka`, `jaian`, `suneo`, `house`.
+Subjects: `doraemon`, `nobita`, `shizuka`, `jaian`, `suneo`, `house`, `tree`, `hedge`.
 
 ## 2. Image-to-3D on hyper3d.ai **(you)**
 
@@ -42,7 +42,11 @@ Save as `assets/raw/<subject>.glb` (gitignored). File names must match the subje
 | Gian | 1.57 m | LOD ladder | 50k (LOD2) |
 | Suneo | 1.35 m | 600k | 40k |
 
-The yard, wall, gate, street and trees come from `scripts/blender/env_build.py`, which builds them procedurally rather than from a downloaded asset. Both use `scripts/blender/export_glb.py` for export settings.
+The yard, wall, gate, street and utility pole come from `scripts/blender/env_build.py`, and the house from `scripts/blender/house_build.py`. Both build procedurally and export through `scripts/blender/export_glb.py`.
+
+Rodin is deliberately **not** used for the house. Image-to-3D reconstructs organic volumes; it rounds off the straight edges, flat wall planes and repeating tile courses that architecture depends on. `house_build.py` produces those directly: a hipped kawara apron and a street-facing gable for the silhouette, every opening cut 30 cm into its wall with a real frame, sill and glass, and a fine band of tile ribs, course lips, rafter tails, gutter brackets and 2-3 cm bevels. It exports at 82k triangles and 0.61 MB after optimisation.
+
+Trees and shrubs are the opposite case and **are** good Rodin candidates. They are not baked into the environment: `src/scene/foliage.tsx` places them per instance from `src/data/scene.ts`, so dropping `public/models/props/tree.glb` and `hedge.glb` in replaces the placeholders with no re-export. Each instance gets a deterministic yaw and a scale jitter so copies do not read as clones.
 
 ## 4. Animation
 
@@ -72,3 +76,5 @@ The app (`src/scene/model-or-proxy.tsx`) HEAD-checks every model URL at start. A
 | `assets/raw/rodin/<subject>/` | Rodin downloads, as delivered | no |
 | `assets/raw/final/` | Blender exports, pre-optimisation | no |
 | `public/models/` | Optimised GLBs the app loads | yes |
+
+`build-assets.mjs` runs `flatten` and `join` on non-character models before welding, merging their hundreds of parts into one mesh per material. That took the scene from 304 draw calls to 68 with no visual change.

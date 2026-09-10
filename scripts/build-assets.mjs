@@ -32,6 +32,12 @@ for (const file of files) {
   const textureSize = isCharacter ? '1024' : '2048';
 
   run(['dedup', file, dest]);
+  if (!isCharacter) {
+    // The house and environment ship as hundreds of separate parts, one draw call each.
+    // Flatten the node tree and merge by material; nothing in the app addresses them by name.
+    run(['flatten', dest, dest]);
+    run(['join', dest, dest]);
+  }
   run(['weld', dest, dest]);
   run(['resize', dest, dest, '--width', textureSize, '--height', textureSize]);
   run(['prune', dest, dest]);
