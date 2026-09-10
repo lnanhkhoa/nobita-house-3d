@@ -41,13 +41,13 @@ COURSE_L = 0.29      # visible length of one course up the slope
 COURSE_LIP = 0.022   # how far each course overlaps the one below
 
 COLOURS = {
-    "stucco": (0.815, 0.775, 0.688, 1.0),
+    "stucco": (0.845, 0.785, 0.635, 1.0),
     "stucco_shadow": (0.690, 0.655, 0.580, 1.0),
     "interior": (0.055, 0.050, 0.048, 1.0),
     "curtain": (0.720, 0.700, 0.660, 1.0),
-    "tile": (0.185, 0.213, 0.281, 1.0),
-    "tile_ridge": (0.150, 0.175, 0.236, 1.0),
-    "fascia": (0.700, 0.672, 0.618, 1.0),
+    "tile": (0.150, 0.200, 0.335, 1.0),
+    "tile_ridge": (0.115, 0.150, 0.255, 1.0),
+    "fascia": (0.720, 0.680, 0.600, 1.0),
     "soffit": (0.775, 0.745, 0.685, 1.0),
     "wood_shutter": (0.560, 0.360, 0.160, 1.0),
     "wood_door": (0.330, 0.180, 0.085, 1.0),

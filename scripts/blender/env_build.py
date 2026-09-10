@@ -38,6 +38,10 @@ COLOURS = {
     "metal": (0.45, 0.45, 0.47, 1.0),
     "plate": (0.90, 0.89, 0.85, 1.0),
     "mortar": (0.52, 0.50, 0.46, 1.0),
+    "stone": (0.78, 0.77, 0.73, 1.0),
+    "shed_wall": (0.42, 0.30, 0.18, 1.0),
+    "shed_roof": (0.48, 0.16, 0.11, 1.0),
+    "postbox": (0.62, 0.14, 0.10, 1.0),
     "pole_concrete": (0.68, 0.67, 0.64, 1.0),
     "insulator": (0.88, 0.89, 0.87, 1.0),
     "wire": (0.10, 0.10, 0.11, 1.0),
@@ -127,6 +131,70 @@ def add_wire(coll, name, span, location, sag=0.35, radius=0.014):
     obj.location = location
     obj.data.materials.append(material("wire", COLOURS["wire"]))
     return obj
+
+
+def add_gable_prism(coll, name, size, location, mat_name):
+    """Solid gable volume, ridge along X. The mesh is symmetric in local Y, which keeps it
+    valid through the final Y-flip (mesh-internal Y offsets mirror; object locations do not)."""
+    w, d, h = size
+    mesh = bpy.data.meshes.new(name)
+    obj = bpy.data.objects.new(name, mesh)
+    coll.objects.link(obj)
+    bm = bmesh.new()
+    a = bm.verts.new((-w / 2, -d / 2, 0))
+    b = bm.verts.new((w / 2, -d / 2, 0))
+    c = bm.verts.new((w / 2, d / 2, 0))
+    d2 = bm.verts.new((-w / 2, d / 2, 0))
+    e = bm.verts.new((-w / 2, 0, h))
+    f = bm.verts.new((w / 2, 0, h))
+    for face in ((a, b, f, e), (c, d2, e, f), (b, c, f), (d2, a, e), (a, d2, c, b)):
+        bm.faces.new(face)
+    bmesh.ops.recalc_face_normals(bm, faces=bm.faces)
+    bm.to_mesh(mesh)
+    bm.free()
+    obj.location = location
+    obj.data.materials.append(material(mat_name, COLOURS[mat_name]))
+    return obj
+
+
+def build_shed(coll):
+    """Storage shed in the back corner of the yard, red gable roof, doors facing the house."""
+    sx, sy = -6.0, -5.6
+    add_box(coll, "shed_slab", (2.40, 1.80, 0.10), (sx, sy, 0.05), "concrete")
+    add_box(coll, "shed_walls", (2.20, 1.60, 1.85), (sx, sy, 0.10 + 1.85 / 2), "shed_wall")
+    for k in range(2):
+        door_x = sx - 0.50 + k * 1.00
+        add_box(coll, f"shed_door_{k}", (0.88, 0.05, 1.55), (door_x, sy + 0.81, 0.92), "wood")
+        add_box(coll, f"shed_door_frame_{k}", (0.06, 0.06, 1.55),
+                (door_x + 0.46, sy + 0.82, 0.92), "shed_wall")
+    add_box(coll, "shed_handle", (0.05, 0.06, 0.22), (sx, sy + 0.85, 0.95), "metal")
+    add_gable_prism(coll, "shed_roof", (2.60, 2.05, 0.62), (sx, sy, 1.95), "shed_roof")
+    add_box(coll, "shed_ridge", (2.64, 0.10, 0.06), (sx, sy, 2.57), "shed_wall")
+
+
+def build_path(coll):
+    """Paved approach from the gate to the porch step, then stepping stones wandering left
+    along the garden front. The porch step itself already bridges most of the gap, so the
+    approach is one slab; a stone trail under the step would just disappear beneath it."""
+    add_box(coll, "gate_apron", (1.70, 0.85, 0.05), (0.90, FRONT_Y - 0.44, 0.025), "stone")
+    stones = [(0.15, 5.00), (-0.65, 4.62), (-1.45, 4.32), (-2.25, 4.12)]
+    for k, (x, y) in enumerate(stones):
+        size = 0.50 - (k % 2) * 0.05
+        add_box(coll, f"path_stone_{k}", (size, size * 0.8, 0.05), (x, y, 0.025), "stone")
+
+
+def build_street_details(coll):
+    """Post box on the gate pier, drain covers along the kerb, a zebra crossing."""
+    add_box(coll, "postbox", (0.34, 0.20, 0.26),
+            (GATE_X + GATE_W / 2 + 0.13, FRONT_Y + 0.22, 1.32), "postbox")
+    add_box(coll, "postbox_slot", (0.24, 0.03, 0.03),
+            (GATE_X + GATE_W / 2 + 0.13, FRONT_Y + 0.33, 1.40), "concrete_dark")
+    for k, dx in enumerate((-5.0, 2.6, 7.0)):
+        add_box(coll, f"drain_{k}", (0.55, 0.32, 0.018), (dx, FRONT_Y + SIDEWALK_D - 0.28,
+                                                          SIDEWALK_H + 0.009), "metal")
+    for k in range(6):
+        add_box(coll, f"zebra_{k}", (0.55, 0.85, 0.02),
+                (-9.0, ROAD_START + 0.75 + k * 1.0, 0.07), "plate")
 
 
 def build():
@@ -265,9 +333,14 @@ def build():
                      "metal", verts=6, rot=(math.radians(90), 0, 0))
     add_box(coll, "pole_sign", (0.03, 0.22, 0.34), (px, py - 0.16, 2.1), "plate")
 
+    build_shed(coll)
+    build_path(coll)
+    build_street_details(coll)
+
     # Blender is Z-up/Y-forward and the glTF exporter maps Blender +Y to glTF -Z, which would
     # put the street behind the house. Every primitive here is symmetric about its own Y axis,
     # so negating each object's Y is enough to land the street at +Z in the exported file.
+    # Anything built after this loop would export mirrored, so it must stay last.
     for obj in coll.objects:
         obj.location.y = -obj.location.y
 
