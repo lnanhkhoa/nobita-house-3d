@@ -33,8 +33,12 @@ const STREET_LAMPS = layout.streets.poles.map(([x, z]) => {
       onFrontStreet ? z + STREET_LAMP_REACH : z,
     ] as [number, number, number],
     color: '#FFE6BC',
-    intensity: 14,
-    distance: 16,
+    // Street lights sit 4.6 m above dark asphalt. With decay 2 the illuminance falls as
+    // 1/d², so the porch lamp's ~9 lands near zero out here: measured road luminance was
+    // unchanged from the ambient 47/255 at intensity 14, and only reaches a readable pool
+    // around 140. Beyond ~220 the wall and the characters start to blow out.
+    intensity: 140,
+    distance: 26,
   };
 });
 
@@ -86,6 +90,8 @@ export function NightLights({ tod }: { tod: TimeOfDayState }) {
   const lastLevel = useRef(-1);
 
   useFrame(() => {
+    // `userData.baseIntensity` is the source of truth: this line overwrites `intensity`
+    // every frame, so tuning the light by setting `intensity` directly does nothing.
     for (const light of lights.current) {
       if (light) light.intensity = light.userData.baseIntensity * tod.lampLevel;
     }

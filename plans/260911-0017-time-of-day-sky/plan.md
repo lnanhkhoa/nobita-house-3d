@@ -81,7 +81,11 @@ At the user's request the night pass now covers the neighbours and the street li
 - **Emissive is now grouped per subtree** (`house-root`, `neighbours-root`, `streets-root`) rather than one flat name table, because material names repeat across GLBs. Neighbour windows glow at 0.8/0.55 against the hero house's 1.15/0.85, so the neighbours stay backdrop.
 - **Street lamp point lights are derived from `layout.streets.poles`**, the same table the Blender builder reads, so moving a pole moves its light.
 
-Verified: five materials glow at night and all five restore to `#000000` @ 1.0 in daylight; 8 point lights on at night, 0 in daylight; night orbit median 16.7 ms, p99 18.9 ms, no frame over 20 ms, 141 draw calls.
+- **Street lamp intensity was far too low.** The lenses glowed but cast nothing: at 4.6 m over dark asphalt with decay 2, intensity 14 left the road at its ambient 47/255. Swept to find the usable band — 90 reads, 140 is right, past ~220 the wall and characters blow out. Shipped at 140 with distance 26, measured road luminance 133/255.
+
+Verified: five materials glow at night and all five restore to `#000000` @ 1.0 in daylight; 8 point lights on at night, 0 in daylight; night orbit median 16.7 ms, p99 18.6 ms, no frame over 20 ms.
+
+**Measurement trap worth remembering.** The first intensity sweep showed road luminance frozen at 46.7 across 14 → 3000, which looked like "the lights do not reach these surfaces". The frame loop rewrites `light.intensity` from `userData.baseIntensity` every frame, so setting `intensity` from the console is erased before the next draw. Tuning has to go through `userData.baseIntensity`. A first frame-pacing reading of 32 ms median was likewise noise from measuring during a shader recompile right after a camera jump; three settled runs all came back at 16.7 ms.
 
 ## Known, pre-existing
 
