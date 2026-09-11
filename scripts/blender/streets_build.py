@@ -32,6 +32,8 @@ LOT_HALF_W, FRONT_Z = 7.5, 5.8
 SIDE_X0, SIDE_X1 = -15.4, -9.4                      # side-road carriageway
 KERB_R, KERB_W, KERB_H = 1.5, 0.16, SIDEWALK_H + 0.06
 POLE_H = 8.0
+# Street-light height on the pole; mirrored by the point lights in src/scene/night-lights.tsx.
+LAMP_H = 4.8
 POLES = [(-16.5, 7.2), (-8.45, 7.2), (8.6, 7.2), (33.0, 7.2), (-8.45, -22.0)]
 
 # Sidewalk bands: (low, high) on the axis that crosses the road they serve.
@@ -228,7 +230,27 @@ def add_pole(coll, tag, x, z, along="x"):
                      "metal", verts=6, rot=rot)
     add_box(coll, f"pole_{tag}_sign", (0.03, 0.22, 0.34) if along == "x" else (0.22, 0.03, 0.34),
             lateral(-0.16, 2.1), "plate")
+    add_street_lamp(coll, tag, x, z, along)
     return base
+
+
+def add_street_lamp(coll, tag, x, z, along="x"):
+    """Street light on a bracket, the way Japanese utility poles carry them: a short arm out
+    over the carriageway, a shallow shade, and a lens left as its own material so the web app
+    can make it emissive at night."""
+    arm_len, lamp_y = 0.85, LAMP_H
+    # The arm reaches out over the carriageway, away from the lots the pole line fronts.
+    reach = arm_len / 2 if along == "x" else -arm_len / 2
+
+    def out(offset, height):
+        return P(x, z + offset, height) if along == "x" else P(x + offset, z, height)
+
+    size = (0.07, arm_len, 0.07) if along == "x" else (arm_len, 0.07, 0.07)
+    add_box(coll, f"pole_{tag}_lamp_arm", size, out(reach, lamp_y), "metal")
+    shade = (0.34, 0.52, 0.12) if along == "x" else (0.52, 0.34, 0.12)
+    add_box(coll, f"pole_{tag}_lamp_shade", shade, out(reach * 2, lamp_y - 0.09), "lamp_shade")
+    lens = (0.28, 0.44, 0.06) if along == "x" else (0.44, 0.28, 0.06)
+    add_box(coll, f"pole_{tag}_lamp_lens", lens, out(reach * 2, lamp_y - 0.17), "lamp_lens")
 
 
 def add_crossarms(coll, tag, x, z, along="x"):

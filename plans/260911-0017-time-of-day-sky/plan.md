@@ -73,6 +73,16 @@ A `code-reviewer` pass found four browser-visible defects that every gate had pa
 
 Also: emissive is snapshotted and restored exactly instead of approached; the sky scattering scalars ease like everything else (`<Sky>` is a BackSide box around the camera, so it — not `scene.background` — is what the viewer sees); `prefers-reduced-motion` moved to one shared helper with a live listener, replacing four copies; lamps no longer carry an unrelated `standY` offset; dead `aria-checked` CSS removed and a forced-colors selection cue added.
 
+## Extended 2026-09-11: the whole block lights up
+
+At the user's request the night pass now covers the neighbours and the street lighting.
+
+- **Street lamps did not exist.** `streets_build.py` built poles with crossarms, insulators, a transformer and a sign, but no luminaire. Added a bracket arm, shade and a lens kept as its own material (`env_lamp_lens`) so the app can drive it emissive. The bracket reaches over the carriageway, not back over the lots — the first attempt had it pointing into the gardens.
+- **Emissive is now grouped per subtree** (`house-root`, `neighbours-root`, `streets-root`) rather than one flat name table, because material names repeat across GLBs. Neighbour windows glow at 0.8/0.55 against the hero house's 1.15/0.85, so the neighbours stay backdrop.
+- **Street lamp point lights are derived from `layout.streets.poles`**, the same table the Blender builder reads, so moving a pole moves its light.
+
+Verified: five materials glow at night and all five restore to `#000000` @ 1.0 in daylight; 8 point lights on at night, 0 in daylight; night orbit median 16.7 ms, p99 18.9 ms, no frame over 20 ms, 141 draw calls.
+
 ## Known, pre-existing
 
 A React "change in the order of Hooks" error fires once at mount. Reproduced at `ddbad9f` in a clean worktree, i.e. before both this feature and the block work, so it predates today. Not chased here; worth a separate pass.

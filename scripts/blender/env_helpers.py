@@ -63,6 +63,9 @@ COLOURS = {
     # street furniture
     "pole_concrete": (0.68, 0.67, 0.64, 1.0),
     "insulator": (0.88, 0.89, 0.87, 1.0),
+    "lamp_shade": (0.72, 0.72, 0.70, 1.0),
+    # Kept as its own material so the app can drive it emissive after dark.
+    "lamp_lens": (0.98, 0.93, 0.78, 1.0),
     "wire": (0.10, 0.10, 0.11, 1.0),
     "road_mark": (0.90, 0.89, 0.84, 1.0),
     "road_mark_dim": (0.80, 0.79, 0.74, 1.0),

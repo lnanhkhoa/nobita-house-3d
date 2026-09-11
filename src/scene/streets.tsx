@@ -183,8 +183,12 @@ function StreetsProxy() {
 /** Roads, sidewalks, kerbs, markings and poles — everything outside a lot wall. */
 export function Streets() {
   return (
-    <ModelOrProxy url={config.models.streets} proxy={<StreetsProxy />}>
-      {(gltf) => <primitive object={gltf.scene} />}
-    </ModelOrProxy>
+    // Named for the same reason as `neighbours-root`: `NightLights` lights the lamp lenses
+    // inside this subtree only.
+    <group name="streets-root">
+      <ModelOrProxy url={config.models.streets} proxy={<StreetsProxy />}>
+        {(gltf) => <primitive object={gltf.scene} />}
+      </ModelOrProxy>
+    </group>
   );
 }

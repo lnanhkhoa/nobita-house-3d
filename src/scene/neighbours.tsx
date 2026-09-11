@@ -281,9 +281,13 @@ function NeighboursProxy() {
 export function Neighbours() {
   return (
     <>
-      <ModelOrProxy url={config.models.neighbours} proxy={<NeighboursProxy />}>
-        {(gltf) => <primitive object={gltf.scene} />}
-      </ModelOrProxy>
+      {/* Named so `NightLights` can scope its material search here; material names repeat
+          across the GLBs, so a scene-wide match lights the wrong objects. */}
+      <group name="neighbours-root">
+        <ModelOrProxy url={config.models.neighbours} proxy={<NeighboursProxy />}>
+          {(gltf) => <primitive object={gltf.scene} />}
+        </ModelOrProxy>
+      </group>
       <Colliders />
     </>
   );
