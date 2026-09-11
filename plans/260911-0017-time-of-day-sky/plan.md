@@ -98,6 +98,17 @@ After the fix, at the real far plane: sky band mean 23/255 (was 87), stars raste
 
 Lesson: verify that pixels appear, not that geometry exists.
 
+## Replaced the Preetham sky entirely, 2026-09-11
+
+The user asked what a morning sky should hold. Measured: looking up in the morning the sky was pure white, 255/255/255 across the band, against the hero reference's clear blue (mid 120/190/252) with fair-weather cumulus. Same root cause as the grey night: Preetham emits HDR radiance meant for tone mapping, which this project turns off to keep Doraemon blue saturated, so it clipped to white by day and floored at grey by night.
+
+- **One art-directed gradient dome for all four presets.** Zenith colour per preset; horizon is the eased fog colour, so fogged ground meets sky without a seam at any time of day; a two-lobe halo around the sun for dawn and sunset. `SkyParams` and the `background` field (never visible behind the dome) are gone from the preset table.
+- **Clouds.** Sixteen cumulus billboards on a camera-centred shell, texture drawn at startup into a canvas (no asset, no Gemini), tint and opacity from the preset: white morning, pink dawn, lit orange sunset, off at night.
+- **Fitted to what the camera actually frames.** The orbit camera always looks down at a target near the ground, so the frame only shows the sky from the horizon to roughly 10–15 degrees. The first cloud ring at 7–28 degrees had zero clouds on screen; they now sit at 4–13 degrees and peek over the rooftops. The gradient reaches the zenith colour by ~8 degrees with a smoothstep, whose zero slope at the horizon also removed a hard line the earlier pow curve drew there.
+- Mirrored clouds use a negative scale; three flips face culling for meshes but not sprites, so the sprite material is double-sided.
+
+Cost: clouds interleaved on/off over three rounds, 16.6–16.7 ms median both ways, no frame over 20 ms.
+
 ## Known, pre-existing
 
 A React "change in the order of Hooks" error fires once at mount. Reproduced at `ddbad9f` in a clean worktree, i.e. before both this feature and the block work, so it predates today. Not chased here; worth a separate pass.

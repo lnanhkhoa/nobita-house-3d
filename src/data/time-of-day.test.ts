@@ -26,12 +26,26 @@ describe('time-of-day presets', () => {
     expect(timesOfDay.filter((p) => p.stars).map((p) => p.id)).toEqual(['night']);
   });
 
-  it('keeps every fog range and colour usable', () => {
+  it('keeps every fog range and sky colour usable', () => {
+    const hex = /^#[0-9A-Fa-f]{6}$/;
     for (const preset of timesOfDay) {
       expect(preset.fog.near).toBeGreaterThan(0);
       expect(preset.fog.far).toBeGreaterThan(preset.fog.near);
-      expect(preset.background).toMatch(/^#[0-9A-Fa-f]{6}$/);
-      expect(preset.fog.color).toMatch(/^#[0-9A-Fa-f]{6}$/);
+      expect(preset.zenith).toMatch(hex);
+      expect(preset.fog.color).toMatch(hex);
+      expect(preset.sunGlow.color).toMatch(hex);
+      expect(preset.clouds.tint).toMatch(hex);
+    }
+  });
+
+  it('hides clouds and the sun halo at night so the stars read against a clear sky', () => {
+    for (const preset of timesOfDay) {
+      if (preset.stars) {
+        expect(preset.clouds.opacity).toBe(0);
+        expect(preset.sunGlow.strength).toBe(0);
+      } else {
+        expect(preset.clouds.opacity).toBeGreaterThan(0.5);
+      }
     }
   });
 });

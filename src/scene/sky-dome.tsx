@@ -1,4 +1,4 @@
-import { Sky, Stars } from '@react-three/drei';
+import { Stars } from '@react-three/drei';
 import { useFrame, useThree } from '@react-three/fiber';
 import { useMemo, useRef } from 'react';
 import {
@@ -9,46 +9,55 @@ import {
   type Mesh,
   type Points,
   ShaderMaterial,
-  type Vector3,
+  Vector3,
 } from 'three';
-import type { Sky as SkyImpl } from 'three/examples/jsm/objects/Sky.js';
+import { Clouds } from './clouds';
 import type { TimeOfDayState } from './use-time-of-day';
 
 /**
- * Radius of the camera-centred night dome. Inside `camera.far` (200) from any orbit, because
+ * Radius of the camera-centred sky dome. Inside `camera.far` (200) from any orbit, because
  * the dome travels with the camera; outside everything the diorama contains within view.
  */
-const NIGHT_DOME_RADIUS = 150;
+const SKY_RADIUS = 150;
 
 /**
- * drei's starfield shader places each star at `vec4(position, 0.5)`, which is the point at
- * **twice** its geometric radius. Measuring the geometry (as a previous fix did) therefore
- * under-reports the real distance by half. With the field centred on the camera, stars land
- * at 2 × (radius .. radius + depth) = 90..130 m: inside the dome and well inside `far`.
+ * drei's starfield shader places each star at `vec4(position, 0.5)`, i.e. at **twice** its
+ * geometric radius, so geometry measurements under-report the real distance by half. With
+ * the field centred on the camera, stars land at 2 × (45..65) = 90..130 m: inside the dome and
+ * well inside `far`.
  */
 const STAR_RADIUS = 45;
 const STAR_DEPTH = 20;
 
-/** Night gradient colour at the zenith; the horizon takes the eased fog colour. */
-const NIGHT_ZENITH = new Color('#03060F');
+interface SkyUniforms {
+  zenith: { value: Color };
+  horizon: { value: Color };
+  sunDirection: { value: Vector3 };
+  glowColor: { value: Color };
+  glowStrength: { value: number };
+}
 
 /**
- * A gradient dome that takes over from `<Sky>` after dark. three's Preetham sky has no night:
- * its fragment shader keeps an ambient floor (`L0 = 0.1 * Fex`) and lifts it through a
- * 1/2.4 gamma, so with the sun below the horizon it still outputs roughly 35% grey — the
- * muddy brown the night preset used to show.
+ * One gradient sky for every time of day, replacing three's Preetham `<Sky>`. That model
+ * emits high-dynamic-range radiance meant to be tone mapped; this project renders with tone
+ * mapping off to keep Doraemon blue saturated, so the morning sky clipped to pure white and
+ * the night sky floored at ~35% grey. Here the colours are art-directed and land on screen as
+ * authored: zenith per preset, horizon equal to the fog so the ground meets the sky without a
+ * seam, plus a two-lobe halo around the sun for dawn and sunset.
  */
-function createNightMaterial() {
+function createSkyMaterial() {
+  const uniforms: SkyUniforms = {
+    zenith: { value: new Color() },
+    horizon: { value: new Color() },
+    sunDirection: { value: new Vector3(0, 1, 0) },
+    glowColor: { value: new Color() },
+    glowStrength: { value: 0 },
+  };
   return new ShaderMaterial({
     side: BackSide,
-    transparent: true,
     depthWrite: false,
     fog: false,
-    uniforms: {
-      zenith: { value: NIGHT_ZENITH.clone() },
-      horizon: { value: new Color() },
-      opacity: { value: 0 },
-    },
+    uniforms: uniforms as unknown as Record<string, { value: unknown }>,
     vertexShader: /* glsl */ `
       varying vec3 vDirection;
       void main() {
@@ -59,13 +68,24 @@ function createNightMaterial() {
     fragmentShader: /* glsl */ `
       uniform vec3 zenith;
       uniform vec3 horizon;
-      uniform float opacity;
+      uniform vec3 sunDirection;
+      uniform vec3 glowColor;
+      uniform float glowStrength;
       varying vec3 vDirection;
       void main() {
-        // Blend fast just above the horizon, then settle into the deep zenith colour, so the
-        // band where the ground's fog meets the sky stays soft.
-        float h = pow(clamp(vDirection.y, 0.0, 1.0), 0.45);
-        gl_FragColor = vec4(mix(horizon, zenith, h), opacity);
+        vec3 direction = normalize(vDirection);
+        // The orbit camera always looks down at a target near the ground, so the frame shows
+        // the sky from the horizon up to ~10 degrees, mostly the lowest few. The gradient
+        // therefore reaches the zenith colour by ~8 degrees (measured at the default view,
+        // the sky above the rooftops sits at 3-8 degrees). Smoothstep's zero slope at the
+        // horizon leaves no visible line where the fogged ground meets the sky; the earlier
+        // pow curve had infinite slope there and drew a hard band.
+        float height = smoothstep(0.0, 0.14, direction.y);
+        vec3 colour = mix(horizon, zenith, height);
+        // Wide soft halo plus a tighter core around the sun.
+        float facing = max(dot(direction, sunDirection), 0.0);
+        colour += glowColor * glowStrength * (0.55 * pow(facing, 6.0) + 0.7 * pow(facing, 48.0));
+        gl_FragColor = vec4(colour, 1.0);
         #include <colorspace_fragment>
       }
     `,
@@ -73,9 +93,8 @@ function createNightMaterial() {
 }
 
 /**
- * Sky, stars, background and fog for the active time of day. `<Sky>` and the key light in
- * `Lighting` read the same eased sun vector, so shadows always agree with where the sun
- * appears.
+ * Sky dome, clouds, stars and fog for the active time of day. The dome's sun halo and the key
+ * light in `Lighting` read the same eased sun vector, so shadows always agree with the sky.
  *
  * Everything is written imperatively per frame, so the transition itself costs no
  * reconciliation; the click that starts it does re-render this subtree once, via the store
@@ -84,14 +103,12 @@ function createNightMaterial() {
 export function SkyDome({ tod }: { tod: TimeOfDayState }) {
   const scene = useThree((s) => s.scene);
   const camera = useThree((s) => s.camera);
-  const sky = useRef<SkyImpl>(null);
-  const nightDome = useRef<Mesh>(null);
+  const dome = useRef<Mesh>(null);
   const starsRig = useRef<Group>(null);
   const stars = useRef<Points>(null);
-  const nightMaterial = useMemo(createNightMaterial, []);
+  const material = useMemo(createSkyMaterial, []);
 
   useFrame(() => {
-    (scene.background as Color | null)?.copy(tod.background);
     const fog = scene.fog as Fog | null;
     if (fog) {
       fog.color.copy(tod.fogColor);
@@ -99,52 +116,32 @@ export function SkyDome({ tod }: { tod: TimeOfDayState }) {
       fog.far = tod.fogFar;
     }
 
-    // three's Sky shader declares all five uniforms, but the typed bag is index-signature
-    // optional, so each write is guarded rather than asserted.
-    const uniforms = (sky.current?.material as ShaderMaterial | undefined)?.uniforms;
-    if (uniforms) {
-      const sun = uniforms.sunPosition?.value as Vector3 | undefined;
-      sun?.copy(tod.sun);
-      const write = (name: keyof typeof tod.sky) => {
-        const uniform = uniforms[name];
-        if (uniform) uniform.value = tod.sky[name];
-      };
-      write('turbidity');
-      write('rayleigh');
-      write('mieCoefficient');
-      write('mieDirectionalG');
-    }
+    const uniforms = material.uniforms as unknown as SkyUniforms;
+    uniforms.zenith.value.copy(tod.zenith);
+    uniforms.horizon.value.copy(tod.fogColor);
+    uniforms.sunDirection.value.copy(tod.sun).normalize();
+    uniforms.glowColor.value.copy(tod.glowColor);
+    uniforms.glowStrength.value = tod.glowStrength;
+    dome.current?.position.copy(camera.position);
 
-    // `starOpacity` is the eased "how night is it" level, 0 by day and 1 at night; the dome and
-    // the stars both key off it so they arrive together.
-    const night = tod.starOpacity;
-    const { opacity, horizon } = nightMaterial.uniforms as {
-      opacity: { value: number };
-      horizon: { value: Color };
-    };
-    opacity.value = night;
-    horizon.value.copy(tod.fogColor);
-    if (nightDome.current) {
-      nightDome.current.position.copy(camera.position);
-      nightDome.current.visible = night > 0.01;
-    }
-    if (starsRig.current) starsRig.current.position.copy(camera.position);
+    starsRig.current?.position.copy(camera.position);
     if (stars.current) {
-      // drei's <Stars> does not forward renderOrder; after the dome (1) keeps them on top.
-      stars.current.renderOrder = 2;
-      // The starfield shader has no usable opacity input, so stars are toggled once the dome
-      // is nearly opaque and dark enough to hide the pop.
-      stars.current.visible = night > 0.85;
+      // drei's <Stars> does not forward renderOrder; drawing after the clouds (2) keeps
+      // them on top, and they only show at night when the clouds are gone anyway.
+      stars.current.renderOrder = 3;
+      // The starfield shader has no usable opacity input, so stars are toggled once the sky
+      // is dark enough to hide the pop.
+      stars.current.visible = tod.starOpacity > 0.85;
     }
   });
 
   return (
     <>
-      <Sky ref={sky} distance={4500} sunPosition={tod.sun.toArray()} />
-      {/* Render order within the transparent pass: dome, then stars on top of it. */}
-      <mesh ref={nightDome} renderOrder={1} material={nightMaterial} frustumCulled={false}>
-        <sphereGeometry args={[NIGHT_DOME_RADIUS, 32, 16]} />
+      {/* Drawn first, as the backdrop; it writes no depth, so everything else lands on top. */}
+      <mesh ref={dome} renderOrder={-1} material={material} frustumCulled={false}>
+        <sphereGeometry args={[SKY_RADIUS, 48, 24]} />
       </mesh>
+      <Clouds tod={tod} />
       {/* The rig follows the camera, so stars keep a fixed distance from any orbit and show
           no parallax, which is right for things at infinity. */}
       <group ref={starsRig}>

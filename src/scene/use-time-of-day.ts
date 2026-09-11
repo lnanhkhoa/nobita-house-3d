@@ -1,7 +1,7 @@
 import { useFrame } from '@react-three/fiber';
 import { useRef } from 'react';
 import { Color, Vector3 } from 'three';
-import { type SkyParams, type TimeOfDayPreset, timeOfDayById } from '../data/time-of-day';
+import { type TimeOfDayPreset, timeOfDayById } from '../data/time-of-day';
 import { useAppStore } from '../state/store';
 import { useReducedMotionRef } from '../utils/reduced-motion';
 
@@ -11,6 +11,11 @@ const EASE_SECONDS = 1.4;
 /** Every value the scene eases between. Mutated in place; never triggers a React render. */
 export interface TimeOfDayState {
   sun: Vector3;
+  zenith: Color;
+  glowColor: Color;
+  glowStrength: number;
+  cloudTint: Color;
+  cloudOpacity: number;
   keyColor: Color;
   keyIntensity: number;
   fillColor: Color;
@@ -18,18 +23,21 @@ export interface TimeOfDayState {
   hemiSky: Color;
   hemiGround: Color;
   hemiIntensity: number;
-  background: Color;
   fogColor: Color;
   fogNear: number;
   fogFar: number;
   lampLevel: number;
-  sky: SkyParams;
   starOpacity: number;
 }
 
 function stateFrom(preset: TimeOfDayPreset): TimeOfDayState {
   return {
     sun: new Vector3(...preset.sun),
+    zenith: new Color(preset.zenith),
+    glowColor: new Color(preset.sunGlow.color),
+    glowStrength: preset.sunGlow.strength,
+    cloudTint: new Color(preset.clouds.tint),
+    cloudOpacity: preset.clouds.opacity,
     keyColor: new Color(preset.key.color),
     keyIntensity: preset.key.intensity,
     fillColor: new Color(preset.fill.color),
@@ -37,12 +45,10 @@ function stateFrom(preset: TimeOfDayPreset): TimeOfDayState {
     hemiSky: new Color(preset.hemisphere.sky),
     hemiGround: new Color(preset.hemisphere.ground),
     hemiIntensity: preset.hemisphere.intensity,
-    background: new Color(preset.background),
     fogColor: new Color(preset.fog.color),
     fogNear: preset.fog.near,
     fogFar: preset.fog.far,
     lampLevel: preset.lampLevel,
-    sky: { ...preset.sky },
     starOpacity: preset.stars ? 1 : 0,
   };
 }
@@ -77,12 +83,16 @@ export function useTimeOfDay(): TimeOfDayState {
     // Exponential approach: frame-rate independent and it never overshoots.
     const t = reduced.current ? 1 : Math.min(1, 1 - Math.exp((-delta * 4) / EASE_SECONDS));
     current.sun.lerp(scratchVector.set(...target.sun), t);
+    current.zenith.lerp(scratchColor.set(target.zenith), t);
+    current.glowColor.lerp(scratchColor.set(target.sunGlow.color), t);
+    current.cloudTint.lerp(scratchColor.set(target.clouds.tint), t);
     current.keyColor.lerp(scratchColor.set(target.key.color), t);
     current.fillColor.lerp(scratchColor.set(target.fill.color), t);
     current.hemiSky.lerp(scratchColor.set(target.hemisphere.sky), t);
     current.hemiGround.lerp(scratchColor.set(target.hemisphere.ground), t);
-    current.background.lerp(scratchColor.set(target.background), t);
     current.fogColor.lerp(scratchColor.set(target.fog.color), t);
+    current.glowStrength = approach(current.glowStrength, target.sunGlow.strength, t);
+    current.cloudOpacity = approach(current.cloudOpacity, target.clouds.opacity, t);
     current.keyIntensity = approach(current.keyIntensity, target.key.intensity, t);
     current.fillIntensity = approach(current.fillIntensity, target.fill.intensity, t);
     current.hemiIntensity = approach(current.hemiIntensity, target.hemisphere.intensity, t);
@@ -90,12 +100,6 @@ export function useTimeOfDay(): TimeOfDayState {
     current.fogFar = approach(current.fogFar, target.fog.far, t);
     current.lampLevel = approach(current.lampLevel, target.lampLevel, t);
     current.starOpacity = approach(current.starOpacity, target.stars ? 1 : 0, t);
-    // `<Sky>` covers the whole frame, so its scattering has to ease too; swapping it would
-    // snap the only thing the viewer actually sees behind the house.
-    current.sky.turbidity = approach(current.sky.turbidity, target.sky.turbidity, t);
-    current.sky.rayleigh = approach(current.sky.rayleigh, target.sky.rayleigh, t);
-    current.sky.mieCoefficient = approach(current.sky.mieCoefficient, target.sky.mieCoefficient, t);
-    current.sky.mieDirectionalG = approach(current.sky.mieDirectionalG, target.sky.mieDirectionalG, t);
   }, -1);
 
   return current;
