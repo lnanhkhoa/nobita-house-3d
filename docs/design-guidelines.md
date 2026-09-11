@@ -34,7 +34,7 @@ Loaded from Google Fonts in `index.html`, `display=swap`.
 |---|---|
 | Loading veil | full-bleed warm wash, paper plate with dashed offset frame, 3px accent progress rule, `n / N models` tabular counter; `role="progressbar"`, removed from DOM after fade |
 | Title card | top-left paper card, Fraunces title + uppercase micro eyebrow |
-| View controls | top-right toolbar: Reset view (plain action), Auto-rotate (`aria-pressed`) |
+| View controls | top-right toolbar, two groups split by a hairline: **Camera** (Reset view as a plain action, Auto-rotate as `aria-pressed`) and **Time of day** (Dawn / Morning / Sunset / Night). The time group is a `<fieldset>` of real radio inputs styled as chips — one choice is active at a time and arrow keys move between them; the input stays in the layout at zero opacity so focus and keyboard behaviour survive. |
 | Roster | bottom-left pill row, one button per character with colour swatch; `aria-current` on selection; doubles as the keyboard/SR path to character selection |
 | Info card | desktop right panel 360px / mobile bottom sheet; eyebrow in character colour, Fraunces title, kana subtitle, ≤62ch body; Esc closes, focus returns to the roster button |
 | Credits | one micro line bottom-left: `Doraemon © Fujiko Pro / Shogakukan / TV Asahi · fan project, non-commercial` |
@@ -49,9 +49,10 @@ Canvas: `role="img"` with a scene-describing `aria-label`; `#ui-root` is `pointe
 | Card in / out | 280 / 180 ms (mobile sheet 320) |
 | Camera fly (`CameraControls`) | smoothTime 0.35 |
 | Character idle | breath ~1.55 Hz bob + squash, slow sway, phase-offset per character |
+| Time-of-day change | ~1.4 s exponential ease on sun direction, light colour/intensity, background and fog; stars cut in once the sky has darkened |
 | Select greeting | ~0.95 s dip → hop → settle, slight yaw wave |
 
-`prefers-reduced-motion`: camera cuts instantly, character motion freezes, card/veil transitions collapse to fades. Implemented in `use-character-motion.ts` and `camera-rig.tsx`, media-query-driven in CSS.
+`prefers-reduced-motion`: camera cuts instantly, character motion freezes, time-of-day snaps rather than eases, card/veil transitions collapse to fades. Implemented in `use-character-motion.ts` and `camera-rig.tsx`, media-query-driven in CSS.
 
 ## 5. Accessibility checklist (current state)
 

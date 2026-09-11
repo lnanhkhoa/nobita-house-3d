@@ -99,10 +99,64 @@ button {
   background: var(--paper-300);
   color: var(--ink-900);
 }
-.controls button[aria-pressed="true"] {
+.controls button[aria-pressed="true"],
+.controls button[aria-checked="true"] {
   background: var(--accent-soft);
   color: var(--accent-600);
   font-weight: 700;
+}
+.controls__group {
+  display: flex;
+  gap: 2px;
+}
+.controls__times {
+  border: 0;
+  margin: 0;
+  padding: 0;
+}
+.controls__times label {
+  position: relative;
+  display: flex;
+  align-items: center;
+  padding: 8px 11px;
+  border-radius: var(--r-md);
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--ink-700);
+  cursor: pointer;
+  transition:
+    background var(--d-hover),
+    color var(--d-hover);
+}
+.controls__times label:hover {
+  background: var(--paper-300);
+  color: var(--ink-900);
+}
+/* The input stays in the layout (not display:none) so it keeps focus and arrow-key behaviour. */
+.controls__times input {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  margin: 0;
+  cursor: pointer;
+}
+.controls__times input:checked + span {
+  color: var(--accent-600);
+  font-weight: 700;
+}
+.controls__times label:has(input:checked) {
+  background: var(--accent-soft);
+}
+.controls__times label:has(input:focus-visible) {
+  outline: 2px solid var(--accent-600);
+  outline-offset: 2px;
+  box-shadow: 0 0 0 4px var(--halo);
+}
+.controls__divider {
+  width: 1px;
+  align-self: stretch;
+  margin: 4px 4px;
+  background: var(--line);
 }
 
 .roster {

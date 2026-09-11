@@ -1,4 +1,5 @@
 import { characters } from '../data/characters';
+import { timesOfDay } from '../data/time-of-day';
 import { useAppStore } from '../state/store';
 
 export function Title() {
@@ -14,14 +15,37 @@ export function ViewControls() {
   const autoRotate = useAppStore((s) => s.autoRotate);
   const toggleAutoRotate = useAppStore((s) => s.toggleAutoRotate);
   const resetView = useAppStore((s) => s.resetView);
+  const timeOfDay = useAppStore((s) => s.timeOfDay);
+  const setTimeOfDay = useAppStore((s) => s.setTimeOfDay);
   return (
-    <div className="panel controls" role="toolbar" aria-label="Camera">
-      <button type="button" onClick={resetView}>
-        Reset view
-      </button>
-      <button type="button" aria-pressed={autoRotate} onClick={toggleAutoRotate}>
-        Auto-rotate
-      </button>
+    <div className="panel controls" role="toolbar" aria-label="View">
+      <div className="controls__group">
+        <button type="button" onClick={resetView}>
+          Reset view
+        </button>
+        <button type="button" aria-pressed={autoRotate} onClick={toggleAutoRotate}>
+          Auto-rotate
+        </button>
+      </div>
+      <div className="controls__divider" aria-hidden="true" />
+      {/* Real radios, not toggle buttons: exactly one time of day is active, and arrow-key
+          navigation between them comes for free. The input is visually hidden, the span is
+          the chip. */}
+      <fieldset className="controls__group controls__times">
+        <legend className="sr-only">Time of day</legend>
+        {timesOfDay.map((preset) => (
+          <label key={preset.id} data-time={preset.id}>
+            <input
+              type="radio"
+              name="time-of-day"
+              value={preset.id}
+              checked={timeOfDay === preset.id}
+              onChange={() => setTimeOfDay(preset.id)}
+            />
+            <span>{preset.label}</span>
+          </label>
+        ))}
+      </fieldset>
     </div>
   );
 }
