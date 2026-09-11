@@ -14,6 +14,8 @@ export interface TimeOfDayState {
   zenith: Color;
   glowColor: Color;
   glowStrength: number;
+  discColor: Color;
+  discStrength: number;
   cloudTint: Color;
   cloudOpacity: number;
   keyColor: Color;
@@ -36,6 +38,8 @@ function stateFrom(preset: TimeOfDayPreset): TimeOfDayState {
     zenith: new Color(preset.zenith),
     glowColor: new Color(preset.sunGlow.color),
     glowStrength: preset.sunGlow.strength,
+    discColor: new Color(preset.sunDisc.color),
+    discStrength: preset.sunDisc.strength,
     cloudTint: new Color(preset.clouds.tint),
     cloudOpacity: preset.clouds.opacity,
     keyColor: new Color(preset.key.color),
@@ -85,6 +89,7 @@ export function useTimeOfDay(): TimeOfDayState {
     current.sun.lerp(scratchVector.set(...target.sun), t);
     current.zenith.lerp(scratchColor.set(target.zenith), t);
     current.glowColor.lerp(scratchColor.set(target.sunGlow.color), t);
+    current.discColor.lerp(scratchColor.set(target.sunDisc.color), t);
     current.cloudTint.lerp(scratchColor.set(target.clouds.tint), t);
     current.keyColor.lerp(scratchColor.set(target.key.color), t);
     current.fillColor.lerp(scratchColor.set(target.fill.color), t);
@@ -92,6 +97,7 @@ export function useTimeOfDay(): TimeOfDayState {
     current.hemiGround.lerp(scratchColor.set(target.hemisphere.ground), t);
     current.fogColor.lerp(scratchColor.set(target.fog.color), t);
     current.glowStrength = approach(current.glowStrength, target.sunGlow.strength, t);
+    current.discStrength = approach(current.discStrength, target.sunDisc.strength, t);
     current.cloudOpacity = approach(current.cloudOpacity, target.clouds.opacity, t);
     current.keyIntensity = approach(current.keyIntensity, target.key.intensity, t);
     current.fillIntensity = approach(current.fillIntensity, target.fill.intensity, t);

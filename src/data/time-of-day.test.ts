@@ -38,13 +38,16 @@ describe('time-of-day presets', () => {
     }
   });
 
-  it('hides clouds and the sun halo at night so the stars read against a clear sky', () => {
+  it('hides clouds, the sun halo and the sun disc at night so the stars read against a clear sky', () => {
     for (const preset of timesOfDay) {
       if (preset.stars) {
         expect(preset.clouds.opacity).toBe(0);
         expect(preset.sunGlow.strength).toBe(0);
+        expect(preset.sunDisc.strength).toBe(0);
       } else {
         expect(preset.clouds.opacity).toBeGreaterThan(0.5);
+        expect(preset.sunDisc.strength).toBeGreaterThan(0);
+        expect(preset.sunDisc.color).toMatch(/^#[0-9A-Fa-f]{6}$/);
       }
     }
   });

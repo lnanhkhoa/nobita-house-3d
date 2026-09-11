@@ -13,6 +13,8 @@ export interface TimeOfDayPreset {
   zenith: string;
   /** Halo around the sun on the dome; 0 hides it. Strongest when the sun is low. */
   sunGlow: { color: string; strength: number };
+  /** The visible sun disc; 0 hides it (night). */
+  sunDisc: { color: string; strength: number };
   /** Cloud billboards: tint follows the light (pink dawn, lit-orange sunset); 0 hides them. */
   clouds: { tint: string; opacity: number };
   /** Key directional light, the one that casts shadows. */
@@ -34,6 +36,7 @@ const MORNING: TimeOfDayPreset = {
   sun: [9, 14, 10],
   zenith: '#6AB4F6',
   sunGlow: { color: '#FFF4DC', strength: 0.3 },
+  sunDisc: { color: '#FFFBEE', strength: 1 },
   clouds: { tint: '#FFFFFF', opacity: 0.96 },
   key: { color: '#FFF3DF', intensity: 2.2 },
   fill: { color: '#DCE9FF', intensity: 0.5 },
@@ -54,6 +57,7 @@ export const timesOfDay: readonly TimeOfDayPreset[] = [
     sun: [-16, 2.6, 9],
     zenith: '#6D86C4',
     sunGlow: { color: '#FFC89A', strength: 0.9 },
+    sunDisc: { color: '#FFE2BC', strength: 1 },
     clouds: { tint: '#F7C6BE', opacity: 0.88 },
     key: { color: '#FFC79A', intensity: 1.5 },
     fill: { color: '#9FB6E8', intensity: 0.55 },
@@ -69,6 +73,7 @@ export const timesOfDay: readonly TimeOfDayPreset[] = [
     sun: [17, 3.2, -6],
     zenith: '#4A5AA6',
     sunGlow: { color: '#FF9A4E', strength: 1.1 },
+    sunDisc: { color: '#FFB57C', strength: 1 },
     clouds: { tint: '#F6A97E', opacity: 0.9 },
     key: { color: '#FF9A4E', intensity: 1.9 },
     fill: { color: '#7E8FD6', intensity: 0.5 },
@@ -83,6 +88,7 @@ export const timesOfDay: readonly TimeOfDayPreset[] = [
     sun: [-10, -4, -8],
     zenith: '#03060F',
     sunGlow: { color: '#000000', strength: 0 },
+    sunDisc: { color: '#000000', strength: 0 },
     // Clouds off so the stars read against a clear sky.
     clouds: { tint: '#2A3350', opacity: 0 },
     // A dim, cool "moon" from the opposite side keeps silhouettes readable.

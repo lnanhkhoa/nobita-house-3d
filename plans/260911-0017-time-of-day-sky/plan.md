@@ -109,6 +109,13 @@ The user asked what a morning sky should hold. Measured: looking up in the morni
 
 Cost: clouds interleaved on/off over three rounds, 16.6–16.7 ms median both ways, no frame over 20 ms.
 
+## Sun disc, 2026-09-11
+
+- **Drawn in the sky shader**, no extra draw call: a flat bright disc of ~2.2 degrees radius with a tight bloom, coloured per preset (warm white morning, peach dawn, orange sunset, off at night).
+- **Elevation is capped for display at 7 degrees.** The morning sun sits at 46 degrees and the orbit camera never frames the sky above ~14, so a truthful disc would never appear. The disc keeps the true azimuth, so it still lines up with the shadows; the key light keeps the true vector. At 9.5 degrees the disc landed under the title card and toolbar; projected screen positions were measured per preset to pick 7.
+- **Clouds thin out around the sun**, each fading to 22% opacity within 6 degrees of it, because a single cloud drifting past otherwise covered the disc for minutes. That needed a material per cloud, at no extra draw calls since sprites are separate draws anyway.
+- **The cloud texture was clipped.** A fixed canvas cut the lowest puffs and left a straight horizontal edge on every cloud; the canvas is now sized to the puffs' bounding box.
+
 ## Known, pre-existing
 
 A React "change in the order of Hooks" error fires once at mount. Reproduced at `ddbad9f` in a clean worktree, i.e. before both this feature and the block work, so it predates today. Not chased here; worth a separate pass.

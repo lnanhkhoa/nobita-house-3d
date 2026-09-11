@@ -12,6 +12,7 @@ import {
   Vector3,
 } from 'three';
 import { Clouds } from './clouds';
+import { displaySunDirection } from './sun-direction';
 import type { TimeOfDayState } from './use-time-of-day';
 
 /**
@@ -35,6 +36,8 @@ interface SkyUniforms {
   sunDirection: { value: Vector3 };
   glowColor: { value: Color };
   glowStrength: { value: number };
+  discColor: { value: Color };
+  discStrength: { value: number };
 }
 
 /**
@@ -52,6 +55,8 @@ function createSkyMaterial() {
     sunDirection: { value: new Vector3(0, 1, 0) },
     glowColor: { value: new Color() },
     glowStrength: { value: 0 },
+    discColor: { value: new Color() },
+    discStrength: { value: 0 },
   };
   return new ShaderMaterial({
     side: BackSide,
@@ -71,6 +76,8 @@ function createSkyMaterial() {
       uniform vec3 sunDirection;
       uniform vec3 glowColor;
       uniform float glowStrength;
+      uniform vec3 discColor;
+      uniform float discStrength;
       varying vec3 vDirection;
       void main() {
         vec3 direction = normalize(vDirection);
@@ -85,6 +92,12 @@ function createSkyMaterial() {
         // Wide soft halo plus a tighter core around the sun.
         float facing = max(dot(direction, sunDirection), 0.0);
         colour += glowColor * glowStrength * (0.55 * pow(facing, 6.0) + 0.7 * pow(facing, 48.0));
+        // Stylised disc: flat and bright with a soft rim, ~2.2 degrees in radius, far larger
+        // than the real 0.27 so it reads at diorama scale. The tight bloom lets it glow into
+        // the sky around it instead of sitting there as a cut-out.
+        float disc = smoothstep(0.99914, 0.99934, facing);
+        colour += discColor * discStrength * 0.4 * pow(facing, 900.0);
+        colour = mix(colour, discColor, disc * discStrength);
         gl_FragColor = vec4(colour, 1.0);
         #include <colorspace_fragment>
       }
@@ -93,8 +106,9 @@ function createSkyMaterial() {
 }
 
 /**
- * Sky dome, clouds, stars and fog for the active time of day. The dome's sun halo and the key
- * light in `Lighting` read the same eased sun vector, so shadows always agree with the sky.
+ * Sky dome, sun, clouds, stars and fog for the active time of day. The drawn sun and the key
+ * light in `Lighting` share the eased sun's azimuth, so shadows point away from where the sun
+ * appears; only the drawn elevation is capped, see `SUN_MAX_ELEVATION` in sun-direction.ts.
  *
  * Everything is written imperatively per frame, so the transition itself costs no
  * reconciliation; the click that starts it does re-render this subtree once, via the store
@@ -119,9 +133,11 @@ export function SkyDome({ tod }: { tod: TimeOfDayState }) {
     const uniforms = material.uniforms as unknown as SkyUniforms;
     uniforms.zenith.value.copy(tod.zenith);
     uniforms.horizon.value.copy(tod.fogColor);
-    uniforms.sunDirection.value.copy(tod.sun).normalize();
+    displaySunDirection(tod.sun, uniforms.sunDirection.value);
     uniforms.glowColor.value.copy(tod.glowColor);
     uniforms.glowStrength.value = tod.glowStrength;
+    uniforms.discColor.value.copy(tod.discColor);
+    uniforms.discStrength.value = tod.discStrength;
     dome.current?.position.copy(camera.position);
 
     starsRig.current?.position.copy(camera.position);
