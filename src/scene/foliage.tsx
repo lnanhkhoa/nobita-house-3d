@@ -1,7 +1,7 @@
 import { useMemo } from 'react';
 import { Box3, type Group } from 'three';
 import { config } from '../config';
-import { layout } from '../data/scene';
+import { inHeroLot, layout } from '../data/scene';
 import { type LoadedGltf, ModelOrProxy } from './model-or-proxy';
 
 /**
@@ -20,14 +20,24 @@ type TreeKind = 'tree' | 'sakura';
 
 const CANOPY: Record<TreeKind, string> = { tree: '#4E9A3B', sakura: '#F0A9BF' };
 
-function TreeProxy({ height, radius, kind }: { height: number; radius: number; kind: TreeKind }) {
+function TreeProxy({
+  height,
+  radius,
+  kind,
+  shadows,
+}: {
+  height: number;
+  radius: number;
+  kind: TreeKind;
+  shadows: boolean;
+}) {
   return (
     <group>
-      <mesh castShadow position={[0, height * 0.25, 0]}>
+      <mesh castShadow={shadows} position={[0, height * 0.25, 0]}>
         <cylinderGeometry args={[0.16, 0.24, height * 0.5, 8]} />
         <meshStandardMaterial color="#6B4A2B" />
       </mesh>
-      <mesh castShadow position={[0, height * 0.5 + radius * 0.8, 0]}>
+      <mesh castShadow={shadows} position={[0, height * 0.5 + radius * 0.8, 0]}>
         <sphereGeometry args={[radius, 12, 10]} />
         <meshStandardMaterial color={CANOPY[kind]} flatShading />
       </mesh>
@@ -35,17 +45,23 @@ function TreeProxy({ height, radius, kind }: { height: number; radius: number; k
   );
 }
 
-function ShrubProxy({ height }: { height: number }) {
+function ShrubProxy({ height, shadows }: { height: number; shadows: boolean }) {
   return (
-    <mesh castShadow position={[0, height * 0.5, 0]}>
+    <mesh castShadow={shadows} position={[0, height * 0.5, 0]}>
       <sphereGeometry args={[height * 0.62, 10, 8]} />
       <meshStandardMaterial color="#4F8F3C" flatShading />
     </mesh>
   );
 }
 
-/** Clones the loaded scene so several instances of one GLB can coexist. */
-function Instance({ gltf, scale }: { gltf: LoadedGltf; scale: number }) {
+/**
+ * Clones the loaded scene so several instances of one GLB can coexist.
+ *
+ * `shadows` is off for everything planted outside Nobita's lot. Each canopy is four draw
+ * calls and several thousand triangles, and the shadow map now spans the whole block, so the
+ * neighbours' planting would double its own cost to darken yards nobody orbits into.
+ */
+function Instance({ gltf, scale, shadows }: { gltf: LoadedGltf; scale: number; shadows: boolean }) {
   const scene = useMemo(() => {
     const clone = gltf.scene.clone(true) as Group;
     clone.traverse((node) => {
@@ -56,13 +72,13 @@ function Instance({ gltf, scale }: { gltf: LoadedGltf; scale: number }) {
         material?: { name?: string };
       };
       if (!mesh.isMesh) return;
-      mesh.castShadow = true;
+      mesh.castShadow = shadows;
       // Leaf and blossom cards cast shadows but do not receive them: hundreds of overlapping
       // alpha-tested quads self-shadow into a muddy dark mass otherwise.
       mesh.receiveShadow = !(mesh.material?.name ?? '').includes('card');
     });
     return clone;
-  }, [gltf.scene]);
+  }, [gltf.scene, shadows]);
   return <primitive object={scene} scale={scale} />;
 }
 
@@ -93,18 +109,22 @@ function Tree({
   const yaw = jitter(index + 1) * Math.PI * 2;
   const size = 1 + (jitter(index + 7) - 0.5) * 0.16;
   const url = kind === 'sakura' ? config.models.sakura : config.models.tree;
+  const shadows = inHeroLot(position[0], position[2]);
   return (
     <group position={position} rotation={[0, yaw, 0]}>
-      <ModelOrProxy url={url} proxy={<TreeProxy height={height} radius={radius} kind={kind} />}>
-        {(gltf) => <ScaledInstance gltf={gltf} target={height * size} />}
+      <ModelOrProxy
+        url={url}
+        proxy={<TreeProxy height={height} radius={radius} kind={kind} shadows={shadows} />}
+      >
+        {(gltf) => <ScaledInstance gltf={gltf} target={height * size} shadows={shadows} />}
       </ModelOrProxy>
     </group>
   );
 }
 
-function ScaledInstance({ gltf, target }: { gltf: LoadedGltf; target: number }) {
+function ScaledInstance({ gltf, target, shadows }: { gltf: LoadedGltf; target: number; shadows: boolean }) {
   const scale = useUnitScale(gltf, target);
-  return <Instance gltf={gltf} scale={scale} />;
+  return <Instance gltf={gltf} scale={scale} shadows={shadows} />;
 }
 
 export function Foliage() {
@@ -129,22 +149,29 @@ export function Foliage() {
           kind={tree.kind}
         />
       ))}
-      {shrubs.map((shrub) => (
-        <group
-          key={shrub.key}
-          position={shrub.position}
-          rotation={[0, jitter(shrub.seed + 3) * Math.PI * 2, 0]}
-        >
-          <ModelOrProxy url={config.models.hedge} proxy={<ShrubProxy height={shrub.height} />}>
-            {(gltf) => (
-              <ScaledInstance
-                gltf={gltf}
-                target={shrub.height * (1 + (jitter(shrub.seed + 11) - 0.5) * 0.18)}
-              />
-            )}
-          </ModelOrProxy>
-        </group>
-      ))}
+      {shrubs.map((shrub) => {
+        const shadows = inHeroLot(shrub.position[0], shrub.position[2]);
+        return (
+          <group
+            key={shrub.key}
+            position={shrub.position}
+            rotation={[0, jitter(shrub.seed + 3) * Math.PI * 2, 0]}
+          >
+            <ModelOrProxy
+              url={config.models.hedge}
+              proxy={<ShrubProxy height={shrub.height} shadows={shadows} />}
+            >
+              {(gltf) => (
+                <ScaledInstance
+                  gltf={gltf}
+                  target={shrub.height * (1 + (jitter(shrub.seed + 11) - 0.5) * 0.18)}
+                  shadows={shadows}
+                />
+              )}
+            </ModelOrProxy>
+          </group>
+        );
+      })}
     </group>
   );
 }

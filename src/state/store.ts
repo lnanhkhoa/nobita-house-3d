@@ -1,4 +1,6 @@
+import type { Object3D } from 'three';
 import { create } from 'zustand';
+import { DEFAULT_TIME_OF_DAY, type TimeOfDayId } from '../data/time-of-day';
 
 interface AppState {
   selectedCharacterId: string | null;
@@ -8,8 +10,14 @@ interface AppState {
   autoRotate: boolean;
   /** Incremented to request a camera reset; camera rig subscribes. */
   resetToken: number;
+  /** Boxes the orbit camera collides with, published by `Neighbours`. */
+  cameraColliders: Object3D[];
+  /** Which lighting/sky preset the scene eases toward. */
+  timeOfDay: TimeOfDayId;
   select: (id: string | null) => void;
   setAvailable: (map: Record<string, boolean>) => void;
+  setCameraColliders: (meshes: Object3D[]) => void;
+  setTimeOfDay: (id: TimeOfDayId) => void;
   toggleAutoRotate: () => void;
   resetView: () => void;
 }
@@ -20,8 +28,12 @@ export const useAppStore = create<AppState>((set) => ({
   preflightDone: false,
   autoRotate: false,
   resetToken: 0,
+  cameraColliders: [],
+  timeOfDay: DEFAULT_TIME_OF_DAY,
   select: (id) => set({ selectedCharacterId: id }),
   setAvailable: (map) => set({ availableModels: map, preflightDone: true }),
+  setCameraColliders: (meshes) => set({ cameraColliders: meshes }),
+  setTimeOfDay: (id) => set({ timeOfDay: id }),
   toggleAutoRotate: () => set((s) => ({ autoRotate: !s.autoRotate })),
   resetView: () => set((s) => ({ resetToken: s.resetToken + 1, selectedCharacterId: null })),
 }));

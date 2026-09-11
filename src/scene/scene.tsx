@@ -1,4 +1,3 @@
-import { Sky } from '@react-three/drei';
 import { characters } from '../data/characters';
 import { useAppStore } from '../state/store';
 import { CameraRig } from './camera-rig';
@@ -7,21 +6,23 @@ import { Environment } from './environment';
 import { Foliage } from './foliage';
 import { House } from './house';
 import { Lighting } from './lighting';
+import { Neighbours } from './neighbours';
+import { NightLights } from './night-lights';
+import { SkyDome } from './sky-dome';
+import { Streets } from './streets';
+import { useTimeOfDay } from './use-time-of-day';
 
 export function Scene() {
   const select = useAppStore((s) => s.select);
+  // Called once here and passed down: each call installs its own per-frame easing.
+  const tod = useTimeOfDay();
   return (
     <>
       <color attach="background" args={['#BFE0FA']} />
-      <fog attach="fog" args={['#CFE6FA', 40, 90]} />
-      <Sky
-        sunPosition={[9, 14, 10]}
-        turbidity={4}
-        rayleigh={1.2}
-        mieCoefficient={0.004}
-        mieDirectionalG={0.85}
-      />
-      <Lighting />
+      <fog attach="fog" args={['#CFE6FA', 48, 110]} />
+      <SkyDome tod={tod} />
+      <Lighting tod={tod} />
+      <NightLights tod={tod} />
       <CameraRig />
       {/* click on empty space deselects */}
       <mesh
@@ -35,6 +36,8 @@ export function Scene() {
       </mesh>
       <House />
       <Environment />
+      <Streets />
+      <Neighbours />
       <Foliage />
       {characters.map((def, index) => (
         <Character key={def.id} def={def} index={index} />

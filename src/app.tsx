@@ -12,6 +12,8 @@ import { LoadingVeil } from './ui/loading-veil';
 const modelUrls = [
   config.models.house,
   config.models.environment,
+  config.models.streets,
+  config.models.neighbours,
   config.models.tree,
   config.models.hedge,
   config.models.sakura,

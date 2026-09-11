@@ -2,12 +2,12 @@ import { config } from '../config';
 import { layout } from '../data/scene';
 import { ModelOrProxy } from './model-or-proxy';
 
-const { lot, wall, sidewalk, road, pole } = layout;
+const { lot, wall } = layout;
 const CONCRETE = '#C9C2B6';
 const GRASS = '#7FB25A';
-const ASPHALT = '#4C4F55';
 
-/** Ground, block wall with a gate opening, sidewalk, road, trees and a utility pole. */
+/** Nobita's lot only: yard, block wall with a gate opening, gate. The sidewalk, road and
+ * utility pole belong to `streets.tsx`, which owns every surface outside a lot wall. */
 function EnvironmentProxy() {
   const halfW = lot.width / 2;
   const halfD = lot.depth / 2;
@@ -23,16 +23,6 @@ function EnvironmentProxy() {
       <mesh receiveShadow rotation={[-Math.PI / 2, 0, 0]} position={[0, 0, wall.frontZ - halfD]}>
         <planeGeometry args={[lot.width, lot.depth]} />
         <meshStandardMaterial color={GRASS} />
-      </mesh>
-      {/* sidewalk */}
-      <mesh receiveShadow position={[0, sidewalk.height / 2, wall.frontZ + sidewalk.depth / 2]}>
-        <boxGeometry args={[lot.width + 6, sidewalk.height, sidewalk.depth]} />
-        <meshStandardMaterial color="#BDB8AE" />
-      </mesh>
-      {/* road */}
-      <mesh receiveShadow rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.001, road.startZ + road.depth / 2]}>
-        <planeGeometry args={[lot.width + 6, road.depth]} />
-        <meshStandardMaterial color={ASPHALT} />
       </mesh>
       {/* front wall, two segments */}
       <mesh castShadow receiveShadow position={[-halfW + leftLen / 2, h / 2, wall.frontZ]}>
@@ -60,11 +50,6 @@ function EnvironmentProxy() {
       <mesh castShadow receiveShadow position={[0, h / 2, backZ]}>
         <boxGeometry args={[lot.width, h, t]} />
         <meshStandardMaterial color={CONCRETE} />
-      </mesh>
-      {/* utility pole */}
-      <mesh castShadow position={[pole.position[0], pole.height / 2, pole.position[2]]}>
-        <cylinderGeometry args={[0.14, 0.18, pole.height, 10]} />
-        <meshStandardMaterial color="#8E8A82" />
       </mesh>
     </group>
   );

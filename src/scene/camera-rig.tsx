@@ -17,6 +17,7 @@ export function CameraRig() {
   const selectedId = useAppStore((s) => s.selectedCharacterId);
   const resetToken = useAppStore((s) => s.resetToken);
   const autoRotate = useAppStore((s) => s.autoRotate);
+  const cameraColliders = useAppStore((s) => s.cameraColliders);
   const camera = useThree((s) => s.camera);
   const scene = useThree((s) => s.scene);
   const gl = useThree((s) => s.gl);
@@ -24,6 +25,14 @@ export function CameraRig() {
     if (import.meta.env.DEV)
       (window as unknown as { __cam: unknown }).__cam = { camera, controls, scene, gl };
   }, [camera, scene, gl]);
+
+  // The orbit radius reaches across every neighbour lot, so without colliders the camera
+  // flies through their walls. camera-controls raycasts these and pulls the eye in front.
+  useEffect(() => {
+    const c = controls.current;
+    if (!c) return;
+    c.colliderMeshes = cameraColliders;
+  }, [cameraColliders]);
 
   useEffect(() => {
     const c = controls.current;
