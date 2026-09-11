@@ -87,6 +87,17 @@ Verified: five materials glow at night and all five restore to `#000000` @ 1.0 i
 
 **Measurement trap worth remembering.** The first intensity sweep showed road luminance frozen at 46.7 across 14 → 3000, which looked like "the lights do not reach these surfaces". The frame loop rewrites `light.intensity` from `userData.baseIntensity` every frame, so setting `intensity` from the console is erased before the next draw. Tuning has to go through `userData.baseIntensity`. A first frame-pacing reading of 32 ms median was likewise noise from measuring during a shader recompile right after a camera jump; three settled runs all came back at 16.7 ms.
 
+## Correction 2026-09-11: the night sky never actually worked
+
+The user reported no starry sky at night. Both earlier "verified" claims about the stars were wrong:
+
+- **Stars were still clipped.** drei's starfield shader emits `vec4(position, 0.5)`, i.e. each star at **twice** its geometric radius. The review fix (radius 120 / depth 40) was verified by measuring geometry positions, 121–180 m, which ignored the doubling: the real distance was 240–320 m, past `camera.far` 200. Proof: at far 200 no star showed; raising far to 3000 made them appear. The stars now sit in a rig that follows the camera at radius 45 / depth 20, i.e. 90–130 m actual.
+- **The Preetham sky has no night.** Its fragment shader keeps an ambient floor (`L0 = 0.1 * Fex`) raised through a 1/2.4 gamma, so below the horizon it still outputs about 35% grey — measured sky mean 87/255, a muddy brown. A camera-centred gradient dome (zenith `#03060F`, horizon = eased fog colour so the ground seam disappears) now fades in over it, keyed on the same night level as the stars. The Sky-reads-dark comment in the preset table was removed.
+
+After the fix, at the real far plane: sky band mean 23/255 (was 87), stars rasterise, dome and stars fully off in dawn/morning/sunset. Cost: an interleaved A/B over four rounds showed the same slow-frame count with and without dome and stars (215 vs 236 of ~480); the machine was under load from Blender and a second browser running the app, so absolute frame times from that run are not representative.
+
+Lesson: verify that pixels appear, not that geometry exists.
+
 ## Known, pre-existing
 
 A React "change in the order of Hooks" error fires once at mount. Reproduced at `ddbad9f` in a clean worktree, i.e. before both this feature and the block work, so it predates today. Not chased here; worth a separate pass.

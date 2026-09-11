@@ -79,7 +79,8 @@ export const timesOfDay: readonly TimeOfDayPreset[] = [
   {
     id: 'night',
     label: 'Night',
-    // Below the horizon: `<Sky>` goes dark on its own, no special-casing needed.
+    // Below the horizon. Preetham `<Sky>` cannot render night (it floors at ~35% grey), so
+    // `SkyDome` fades a gradient dome over it, keyed on `stars`.
     sun: [-10, -4, -8],
     sky: { turbidity: 12, rayleigh: 0.6, mieCoefficient: 0.004, mieDirectionalG: 0.8 },
     // A dim, cool "moon" from the opposite side keeps silhouettes readable.
