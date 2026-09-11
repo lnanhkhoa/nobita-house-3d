@@ -3,6 +3,7 @@ import { useAppStore } from '../state/store';
 import { CameraRig } from './camera-rig';
 import { Character } from './character';
 import { Environment } from './environment';
+import { Fireflies } from './fireflies';
 import { Foliage } from './foliage';
 import { House } from './house';
 import { Lighting } from './lighting';
@@ -39,6 +40,7 @@ export function Scene() {
       <Streets />
       <Neighbours />
       <Foliage />
+      <Fireflies tod={tod} />
       {characters.map((def, index) => (
         <Character key={def.id} def={def} index={index} />
       ))}

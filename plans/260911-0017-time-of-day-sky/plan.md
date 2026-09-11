@@ -122,6 +122,12 @@ Cost: clouds interleaved on/off over three rounds, 16.6–16.7 ms median both wa
 - **Placed in the moonlight's direction.** The night preset's `sun` vector is the key light, below the horizon, so the moon takes its azimuth at a fixed drawn elevation of 4.5 degrees (`displayMoonDirection`). The old night azimuth `(-10, -8)` projected off the left of the default view, so it moved to `(-4.4, -13.5)`, ~18 degrees left of straight ahead. A/B screenshots of the facade under both directions look the same; the night front is lit by the lamps and fill, not the key.
 - **Measured on screen:** at 1280×720 the moon sits left of the house, behind the power lines (they are opaque and nearer, so they cross it); at 1280×577 its centre projects to (361, 95), clear of the title card and toolbar. Drawn after the stars so the disc covers any star behind it; hidden by day.
 
+## Fireflies, 2026-09-11
+
+- **80 fireflies over Nobita's garden** (`src/scene/fireflies.tsx`), one `Points` draw call. Flight (two sines per axis at unrelated rates) and flashing (a slow sine through a smoothstep, one flash per 2–5 s, near-dark between) both run in the vertex shader from a single time uniform: no per-frame buffer upload. Additive glow, depth-tested, no depth writes, so the wall, hedges and house hide the ones behind them. Fade with the stars; hidden by day; frozen in place with reduced motion.
+- **Placement** (`firefly-placement.ts`, tested): deterministic scatter inside the boundary wall, at least 0.3 m from the house footprint, porch and wall; each wander is sized to the room around its anchor. Anchors 0.6–3.0 m up, because from the street the 1.6 m wall hides anything lower in the front strip.
+- **Sizing measured on screen.** A 0.45 m glow read as faint specks against the lit wall; 0.8 m with a flat halo turned each fly into a shrub-sized ball. Settled on 0.8 m with a small hot core and a steep halo. Frame pacing at night stayed at 16.7 ms median, none over 20 ms (headless).
+
 ## Known, pre-existing
 
 A React "change in the order of Hooks" error fires once at mount. Reproduced at `ddbad9f` in a clean worktree, i.e. before both this feature and the block work, so it predates today. Not chased here; worth a separate pass.
