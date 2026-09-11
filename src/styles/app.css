@@ -52,11 +52,74 @@ button {
   box-shadow: var(--sh-1);
 }
 
-.title {
+/* Title card with the performance panel stacked under it. */
+.top-left {
   position: absolute;
   top: 16px;
   left: 16px;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 8px;
+}
+.title {
   padding: 10px 14px;
+}
+
+.perf {
+  padding: 8px 14px 10px;
+  font:
+    12px / 1.4 ui-monospace,
+    SFMono-Regular,
+    Menlo,
+    monospace;
+  font-variant-numeric: tabular-nums;
+  color: var(--ink-700);
+}
+.perf__fps {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  margin: 0 0 4px;
+  font-weight: 600;
+  color: var(--ink-500);
+}
+.perf__fps b {
+  font-size: 18px;
+  color: var(--ink-900);
+}
+.perf__dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--line-strong);
+}
+.perf__fps[data-tier="good"] .perf__dot {
+  background: var(--perf-good);
+}
+.perf__fps[data-tier="fair"] .perf__dot {
+  background: var(--perf-fair);
+}
+.perf__fps[data-tier="poor"] .perf__dot {
+  background: var(--perf-poor);
+}
+.perf__grid {
+  display: grid;
+  grid-template-columns: auto auto;
+  gap: 2px 14px;
+  margin: 0;
+}
+.perf__grid div {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+}
+.perf__grid dt {
+  color: var(--ink-500);
+}
+.perf__grid dd {
+  margin: 0;
+  color: var(--ink-900);
 }
 .title h1 {
   margin: 0;
@@ -268,17 +331,6 @@ button {
   background: var(--paper-300);
 }
 
-.credits {
-  position: absolute;
-  left: 16px;
-  bottom: 14px;
-  font-size: 11px;
-  font-weight: 600;
-  letter-spacing: 0.04em;
-  color: var(--ink-500);
-  text-shadow: 0 1px 0 rgba(255, 255, 255, 0.6);
-}
-
 .veil {
   position: fixed;
   inset: 0;
@@ -340,7 +392,7 @@ button {
 }
 
 @media (max-width: 767px) {
-  .title {
+  .top-left {
     top: 12px;
     left: 12px;
   }
@@ -368,9 +420,6 @@ button {
     max-height: 62vh;
     overflow-y: auto;
     animation-name: sheet-in;
-  }
-  .credits {
-    display: none;
   }
 }
 @keyframes sheet-in {

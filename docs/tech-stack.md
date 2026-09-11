@@ -51,8 +51,10 @@ src/
                          `camera-colliders` group
   scene/model-or-proxy   GLB when it exists on the server, placeholder otherwise
   scene/use-character-motion  procedural idle: breath bob+squash, sway, hover lift, select hop
+  scene/perf-probe.tsx   frame pacing + renderer.info sampler for the stats panel
   state/store.ts         zustand store + model preflight
-  ui/                    loading veil, info card, view controls, roster, credits
+  state/perf-store.ts    latest performance sample (separate store, 2 updates/s)
+  ui/                    loading veil, info card, view controls, roster, performance stats
 scripts/
   gen-ref-images.mjs     Gemini image generation (Flash 1K, 3 views; Pro/2K behind flags)
   recolor-character-texture.py  per-character HSV recolour rules

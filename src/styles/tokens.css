@@ -15,6 +15,9 @@
   --accent-soft: rgba(11, 99, 197, 0.1);
   --scrim: rgba(42, 36, 30, 0.46);
   --halo: #fff;
+  --perf-good: #2f9e5a;
+  --perf-fair: #d69a12;
+  --perf-poor: #cf3b2e;
   --panel-bg: rgba(247, 241, 230, 0.92);
   --panel-blur: saturate(1.1) blur(10px);
   --sh-1: 0 1px 2px rgba(42, 36, 30, 0.1), 0 2px 8px rgba(42, 36, 30, 0.08);

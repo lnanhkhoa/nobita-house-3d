@@ -1,5 +1,6 @@
 import { characters } from '../data/characters';
 import { timesOfDay } from '../data/time-of-day';
+import { usePerfStore } from '../state/perf-store';
 import { useAppStore } from '../state/store';
 
 export function Title() {
@@ -72,10 +73,43 @@ export function Roster() {
   );
 }
 
-export function Credits() {
+/** 60 Hz with a little slack is smooth; under 30 is visibly choppy. */
+const fpsTier = (fps: number) => (fps >= 55 ? 'good' : fps >= 30 ? 'fair' : 'poor');
+
+const formatCount = (n: number) =>
+  n >= 1e6 ? `${(n / 1e6).toFixed(2)}M` : n >= 1e3 ? `${(n / 1e3).toFixed(1)}k` : `${n}`;
+
+/**
+ * Live render stats under the title. Not a live region: announcing a number that changes
+ * twice a second would drown a screen reader.
+ */
+export function PerfStats() {
+  const sample = usePerfStore((s) => s.sample);
+  const dash = '—';
   return (
-    <p className="credits">
-      Doraemon &copy; Fujiko Pro / Shogakukan / TV Asahi &middot; fan project, non-commercial
-    </p>
+    <section className="panel perf" aria-label="Performance">
+      <p className="perf__fps" data-tier={sample ? fpsTier(sample.fps) : undefined}>
+        <span className="perf__dot" aria-hidden="true" />
+        <b>{sample ? Math.round(sample.fps) : dash}</b> FPS
+      </p>
+      <dl className="perf__grid">
+        <div>
+          <dt>Frame</dt>
+          <dd>{sample ? `${sample.frameMs.toFixed(1)} ms` : dash}</dd>
+        </div>
+        <div>
+          <dt>Worst</dt>
+          <dd>{sample ? `${sample.worstMs.toFixed(1)} ms` : dash}</dd>
+        </div>
+        <div>
+          <dt>Draws</dt>
+          <dd>{sample ? sample.calls : dash}</dd>
+        </div>
+        <div>
+          <dt>Tris</dt>
+          <dd>{sample ? formatCount(sample.triangles) : dash}</dd>
+        </div>
+      </dl>
+    </section>
   );
 }

@@ -34,10 +34,10 @@ Loaded from Google Fonts in `index.html`, `display=swap`.
 |---|---|
 | Loading veil | full-bleed warm wash, paper plate with dashed offset frame, 3px accent progress rule, `n / N models` tabular counter; `role="progressbar"`, removed from DOM after fade |
 | Title card | top-left paper card, Fraunces title + uppercase micro eyebrow |
+| Performance | paper card stacked under the title: FPS with a status dot (green ≥55, amber ≥30, red below), then frame / worst-frame ms, draw calls and triangles in tabular monospace; averaged over 500 ms windows by `scene/perf-probe.tsx`; not a live region |
 | View controls | top-right toolbar, two groups split by a hairline: **Camera** (Reset view as a plain action, Auto-rotate as `aria-pressed`) and **Time of day** (Dawn / Morning / Sunset / Night). The time group is a `<fieldset>` of real radio inputs styled as chips — one choice is active at a time and arrow keys move between them; the input stays in the layout at zero opacity so focus and keyboard behaviour survive. |
 | Roster | bottom-left pill row, one button per character with colour swatch; `aria-current` on selection; doubles as the keyboard/SR path to character selection |
 | Info card | desktop right panel 360px / mobile bottom sheet; eyebrow in character colour, Fraunces title, kana subtitle, ≤62ch body; Esc closes, focus returns to the roster button |
-| Credits | one micro line bottom-left: `Doraemon © Fujiko Pro / Shogakukan / TV Asahi · fan project, non-commercial` |
 
 Canvas: `role="img"` with a scene-describing `aria-label`; `#ui-root` is `pointer-events:none`, only leaf panels re-enable.
 

@@ -3,9 +3,10 @@ import { useEffect } from 'react';
 import { NoToneMapping, SRGBColorSpace } from 'three';
 import { config } from './config';
 import { characters } from './data/characters';
+import { PerfProbe } from './scene/perf-probe';
 import { Scene } from './scene/scene';
 import { preflightModels } from './state/store';
-import { Credits, Roster, Title, ViewControls } from './ui/chrome';
+import { PerfStats, Roster, Title, ViewControls } from './ui/chrome';
 import { InfoCard } from './ui/info-card';
 import { LoadingVeil } from './ui/loading-veil';
 
@@ -38,13 +39,16 @@ export function App() {
         aria-label="Nobita's house from Doraemon seen from the street: a two-storey cream house with a blue-grey tile roof behind a concrete block wall, with Doraemon, Nobita, Shizuka, Gian and Suneo standing on the sidewalk."
       >
         <Scene />
+        <PerfProbe />
       </Canvas>
       <div id="ui-root">
-        <Title />
+        <div className="top-left">
+          <Title />
+          <PerfStats />
+        </div>
         <ViewControls />
         <Roster />
         <InfoCard />
-        <Credits />
       </div>
       <LoadingVeil />
     </>
