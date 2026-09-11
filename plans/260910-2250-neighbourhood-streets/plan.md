@@ -1,7 +1,7 @@
 ---
 title: "Neighbourhood: streets and neighbour houses around Nobita's lot"
 description: "Turn the single-lot diorama into a corner of a Japanese suburb: an L-shaped street network (front road + side road with a crossroads) and seven low-detail neighbour houses plus a coin parking lot, built procedurally in Blender and placed from src/data/scene.ts with proxy-first loading."
-status: pending
+status: done
 priority: P2
 effort: "2d"
 tags: [threejs, r3f, blender, procedural, environment]
@@ -49,10 +49,10 @@ Interiors, cars, people other than the five characters, night lighting, traffic,
 
 | # | Phase | Depends on | Effort | Status |
 |---|---|---|---|---|
-| 1 | [Layout data, proxies, camera colliders](phase-01-layout-and-proxies.md) | — | 4h | pending |
-| 2 | [Blender: streets](phase-02-blender-streets.md) | 1 (numbers) | 4h | pending |
-| 3 | [Blender: neighbour houses and parking lot](phase-03-blender-neighbours.md) | 1 (numbers) | 6h | pending |
-| 4 | [Integration, performance, docs](phase-04-integration-perf-docs.md) | 2, 3 | 2h | pending |
+| 1 | [Layout data, proxies, camera colliders](phase-01-layout-and-proxies.md) | — | 4h | done |
+| 2 | [Blender: streets](phase-02-blender-streets.md) | 1 (numbers) | 4h | done |
+| 3 | [Blender: neighbour houses and parking lot](phase-03-blender-neighbours.md) | 1 (numbers) | 6h | done |
+| 4 | [Integration, performance, docs](phase-04-integration-perf-docs.md) | 2, 3 | 2h | done |
 
 Phase 1 fixes every coordinate the Blender scripts mirror, so it goes first. Phases 2 and 3 are independent of each other but share one Blender session, so run them in order. The app is usable with proxies after Phase 1.
 
@@ -108,6 +108,44 @@ docs/asset-pipeline.md, docs/tech-stack.md   updated
 | Python constants drift from `scene.ts` | House proxy and GLB disagree on screen | Phase 4 overlays proxy and GLB (toggle `availableModels`) and compares; constants block in each script names its TS source |
 | Triangle budget blown by 9 extra tree instances (3–8k each) | Triangles > 650k | Use the smaller canopy size for far trees or drop lot-4/lot-6 trees, which are the least visible |
 | Fog end pushed out reveals the 400 m ground plane edge | Horizon line visible at max distance | Keep fog end ≤ 120 and the far ends of the roads at ±42 inside it |
+
+## Results (2026-09-11)
+
+Full evidence, screenshots and per-GLB costs: `plans/reports/perf-260911-0245-neighbourhood.md`.
+
+| # | Criterion | Result |
+|---|---|---|
+| 1 | Neighbours on every side, parking opposite the gate, real geometry | met |
+| 2 | Continuous sidewalk/kerb/road round the corner, rounded kerbs, no z-fighting | met — pavement, kerb and carriageway all curve together at all four corners |
+| 3 | Camera never enters a neighbour house; default and Reset view unchanged | met — 7 colliders sized from the roof, so the eaves stay outside too; the camera stops at 10.79 / −11.29 / −19.79 against eaves at 11.0 / −11.6 / −20.0 |
+| 4 | Characters on the sidewalk; `bun run test` passes incl. the new layout test | met — 12 tests |
+| 5 | 60 FPS · draw calls ≤ 110 · triangles ≤ 650k · payload ≤ 18 MB | 60 FPS and 7.9 MB met; **195 draw calls and 763k triangles are over** |
+| 6 | lint, typecheck, test, build clean; docs updated | met |
+
+Criterion 5 is the one miss and it is not the new geometry: `streets.glb` and `neighbours.glb`
+together are 15k triangles and 31 primitives. `Foliage` clones a GLB per instance — 4 draw
+calls a tree, 3 a shrub — so the block's 34 plants are 113 of the 195 calls. Both levers this
+plan named were taken (planting outside Nobita's lot stopped casting shadows, and the two
+least visible neighbour trees were dropped), which brought 259 → 195 calls and 850k → 763k
+triangles. Closing the rest needs either the prop-GLB material merge (~36 calls, free) or
+`InstancedMesh` foliage (a rewrite, and a feature); the report ranks them. The ≤110 figure was
+set against one house and 15 plants and does not survive tripling the content at one clone per
+plant. 60 FPS holds at every azimuth.
+
+A `code-reviewer` pass returned DONE_WITH_CONCERNS with no blockers. Its one substantive
+finding was real: `add_courses` folded the lot yaw into the roof-lip tilt axis but not its
+sign, mirroring every course lip on three of the seven houses. Fixed and re-verified — each
+lip's world normal now matches its own roof shell to within 0.001. Three medium findings
+(collider narrower than the eaves, proxy kerbs on the wrong side of the line, pavement corners
+square behind a rounded kerb) and five low ones were fixed too; the table in the report lists
+each with its fix.
+
+Other deviations, all recorded in the report: `+π/2` not `−π/2` for a `+x`-facing house (three.js
+is right-handed, and a test guards it); `kerbRadius` 1.5 not 2.0 with retuned pole positions
+and a fifth pole west of the junction; `streets.glb` 0.49 MB not ≤ 0.1 MB (the estimate counted
+geometry, the file is 2048 WebP tile maps); `neighbours.glb` 21 materials not ≤ 12 (six wall
+tints and four roof tints are what this plan's own decision table asks for); seven extra trees
+not nine; `env_build.py` lost exactly 50 objects, not "about 25".
 
 ## Open questions
 

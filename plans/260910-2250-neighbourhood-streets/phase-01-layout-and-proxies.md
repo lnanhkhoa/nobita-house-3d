@@ -1,7 +1,7 @@
 ---
 phase: 1
 title: "Layout data, proxies, camera colliders"
-status: pending
+status: done
 priority: P2
 effort: "4h"
 dependencies: []
@@ -79,10 +79,10 @@ Camera collision: `neighbours.tsx` always renders `<group name="camera-colliders
 8. Run `bun run lint && bun run typecheck && bun run test`, then `bun run dev` and screenshot four azimuths (0°, 90°, 180°, 270°) for the record in `plans/reports/`.
 
 ## Success Criteria
-- [ ] Proxies visible for streets, seven houses, parking lot, four poles; sidewalk continuous around the corner
-- [ ] Camera stops at neighbour house boxes at every azimuth; default view and Reset view unchanged
-- [ ] `scene.test.ts` passes and fails when a lot is moved onto the road (verified once by hand)
-- [ ] lint, typecheck, test clean; 60 fps in dev on the M4
+- [x] Proxies visible for streets, seven houses, parking lot, four poles; sidewalk continuous around the corner
+- [x] Camera stops at neighbour house boxes at every azimuth; default view and Reset view unchanged
+- [x] `scene.test.ts` passes and fails when a lot is moved onto the road (verified once by hand)
+- [x] lint, typecheck, test clean; 60 fps in dev on the M4
 
 ## Risk Assessment
 - `colliderMeshes` raycast cost: 8 boxes are trivial; if `getObjectByName` runs before the group mounts (it should not, all effects run after commit), move to a `useLayoutEffect` in `Neighbours` that writes the array into the store.

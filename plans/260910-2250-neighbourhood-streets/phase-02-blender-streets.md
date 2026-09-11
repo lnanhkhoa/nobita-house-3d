@@ -1,7 +1,7 @@
 ---
 phase: 2
 title: "Blender: streets"
-status: pending
+status: done
 priority: P2
 effort: "4h"
 dependencies: [1]
@@ -57,10 +57,10 @@ so both the `exec(open(...))` MCP path and a direct `blender --python` path work
 6. Record triangle count and file size in the plan's Phase 4 table.
 
 ## Success Criteria
-- [ ] `environment.glb` contains no street geometry; `streets.glb` renders the crossroads with rounded kerbs and markings
-- [ ] Characters still stand on the sidewalk surface (no floating, no sinking)
-- [ ] ≤ 8k triangles, ≤ 0.1 MB; no z-fighting at any seam
-- [ ] `env_build.py` still reproduces today's lot exactly apart from the removed parts
+- [x] `environment.glb` contains no street geometry; `streets.glb` renders the crossroads with rounded kerbs and markings
+- [x] Characters still stand on the sidewalk surface (no floating, no sinking)
+- [x] ≤ 8k triangles, ≤ 0.1 MB; no z-fighting at any seam
+- [x] `env_build.py` still reproduces today's lot exactly apart from the removed parts
 
 ## Risk Assessment
 - Helper extraction breaks `env_build.py` silently (materials renamed, collection handling): the object-count diff in step 1 and a screenshot comparison catch it.

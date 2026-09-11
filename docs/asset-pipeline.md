@@ -42,7 +42,35 @@ Save as `assets/raw/<subject>.glb` (gitignored). File names must match the subje
 | Gian | 1.57 m | LOD ladder | 50k (LOD2) |
 | Suneo | 1.35 m | 600k | 40k |
 
-The yard, wall, gate, street and utility pole come from `scripts/blender/env_build.py`, and the house from `scripts/blender/house_build.py`. Both build procedurally and export through `scripts/blender/export_glb.py`.
+Everything outdoors is procedural, split so exactly one script owns every surface:
+
+| Script | Owns | Exports |
+|---|---|---|
+| `house_build.py` | Nobita's house | `house.glb` |
+| `env_build.py` | Nobita's lot: yard, block wall, gate, shed, path, yard props | `environment.glb` |
+| `streets_build.py` | the public realm: both carriageways, four sidewalk strips, kerbs and their corner arcs, markings, crossings, drains, five utility poles and their wires | `streets.glb` |
+| `neighbours_build.py` | the seven neighbour lots and the coin parking lot | `neighbours.glb` |
+| `plants_build.py` | trees, hedge, cherry blossom | `props/*.glb` |
+
+`env_helpers.py` holds what they share — the colour table, `material`, `fresh_collection`, `add_box`/`add_cylinder`/`add_sphere`/`add_wire`/`add_gable_prism`/`add_quarter_ring`, and `hex_rgba` for turning a `scene.ts` tint into a linear colour. It loads `texture_lib.py` itself, so a builder only ever execs one file:
+
+```python
+import os
+SCRIPTS_DIR = f"{ROOT_DIR}/scripts/blender"
+exec(open(os.path.join(SCRIPTS_DIR, "env_helpers.py")).read())
+```
+
+**Coordinates.** glTF is +Y up with the street at +Z; Blender is Z-up and its exporter maps Blender +Y to glTF −Z. `streets_build.py` and `neighbours_build.py` convert at the point of use with `P(x, z, y) → (x, −z, y)` and never flip anything afterwards. `env_build.py` predates that and negates every object's Y as the **last** thing it does — it is the only script that still works this way, and anything added after that loop exports mirrored. `house_build.py` simply constructs facing −Y.
+
+**Neighbour houses.** Three variants (`hip2`, `gable2`, `gable1`) whose dimensions, roof pitch and setback are the same numbers `houseVariants` and `houseTransform` hold in `src/data/scene.ts`; the Python copy names its TypeScript source in a comment block. A house is laid out in its own frame — local +X along the street, local +Z pointing at it — and `place()` rotates that frame about the house centre before translating, because `add_box` bakes translation into the mesh and rotating the object afterwards would spin it about its own origin. Yaws are quarter turns only, so the rotation is an axis swap (`swapped()`) that never touches a mesh. Rotating +Z by **+π/2** about +Y lands on +X.
+
+Roofs are one six-vertex build for all three variants: four eave corners plus a ridge line. A ridge as long as the roof degenerates the two hip triangles into vertical gable ends, so `hip2` and both gables come out of the same function — and out of the matching `roofGeometry` in `src/scene/neighbours.tsx`, which is why the proxy and the GLB share a silhouette.
+
+Anything that has to lie flat on a roof slope goes through `slope_rotation()`, never a hand-written euler. A local axis lands on a different Blender axis *and* a different direction per yaw (local +Z is Blender −Y at yaw 0 but +Y at yaw π), and a rotation about Blender X puts +Z on the opposite side of the horizon from a rotation about Blender Y. Folding in only the axis mirrors every course lip on the yaw-0 and quarter-turn lots.
+
+**Junction corners.** `streets_build.py` cuts a kerb-radius square out of each of the four pavement corners, then fills it with `add_quarter_disc` (pavement) inside `add_quarter_ring` (kerb) — both at the same radius, so they meet with no seam — and an asphalt slab underneath for the piece the curve gives back to the road. Rounding only the kerb band leaves a square nub of pavement standing out past the curve.
+
+Both build procedurally and export through `scripts/blender/export_glb.py`, which takes `COLLECTION` (`ENV`, `STREETS`, `NEIGHBOURS`) or an explicit `OBJECTS` list.
 
 Rodin is deliberately **not** used for the house. Image-to-3D reconstructs organic volumes; it rounds off the straight edges, flat wall planes and repeating tile courses that architecture depends on. `house_build.py` produces those directly: a hipped kawara apron and a street-facing gable for the silhouette, every opening cut 30 cm into its wall with a real frame, sill and glass, and a fine band of tile ribs, course lips, rafter tails, gutter brackets and 2-3 cm bevels. It exports at 82k triangles and 0.61 MB after optimisation.
 
@@ -91,5 +119,7 @@ The app (`src/scene/model-or-proxy.tsx`) HEAD-checks every model URL at start. A
 | `assets/raw/rodin/<subject>/` | Rodin downloads, as delivered | no |
 | `assets/raw/final/` | Blender exports, pre-optimisation | no |
 | `public/models/` | Optimised GLBs the app loads | yes |
+
+Current payload: `house.glb` 1.68 MB, `neighbours.glb` 0.94 MB, `environment.glb` 0.50 MB, `streets.glb` 0.49 MB, six characters 3.41 MB, three props 0.87 MB — 7.9 MB in total.
 
 `build-assets.mjs` runs `flatten` and `join` on non-character models before welding, merging their hundreds of parts into one mesh per material. That took the scene from 304 draw calls to 68 with no visual change.

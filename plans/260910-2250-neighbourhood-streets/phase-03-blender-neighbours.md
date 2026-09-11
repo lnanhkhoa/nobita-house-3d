@@ -1,7 +1,7 @@
 ---
 phase: 3
 title: "Blender: neighbour houses and parking lot"
-status: pending
+status: done
 priority: P2
 effort: "6h"
 dependencies: [1]
@@ -59,10 +59,10 @@ Bevel: 0.02 on massing and roof edges only (`bmesh.ops.bevel`, 1 segment) to cat
 5. In the app, orbit all four azimuths; check that no house pokes through its lot wall, that gates face the street, and that the `back` roof peeks above Nobita's roof from the hero view.
 
 ## Success Criteria
-- [ ] Seven houses in three variants, correct facing, tints applied; parking lot opposite the gate
-- [ ] ≤ 45k triangles, ≤ 1 MB, ≤ 12 draw calls for `neighbours.glb`
-- [ ] Silhouettes match the Phase 1 proxies within 0.3 m (visual overlay)
-- [ ] Style reads as the same clay-smooth family as the hero house, one step less detailed
+- [x] Seven houses in three variants, correct facing, tints applied; parking lot opposite the gate
+- [x] ≤ 45k triangles, ≤ 1 MB, ≤ 12 draw calls for `neighbours.glb`
+- [x] Silhouettes match the Phase 1 proxies within 0.3 m (visual overlay)
+- [x] Style reads as the same clay-smooth family as the hero house, one step less detailed
 
 ## Risk Assessment
 - Rotated assemblies: rotation must happen in bmesh about the house pivot before translation (`house_build.py` lesson: rotating objects after baking translation spins them around the world origin). `build_house` collects parts as bmesh, rotates by yaw with `rotate_parts`, then translates.

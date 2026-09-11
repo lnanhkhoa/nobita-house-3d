@@ -1,7 +1,7 @@
 ---
 phase: 4
 title: "Integration, performance, docs"
-status: pending
+status: done
 priority: P2
 effort: "2h"
 dependencies: [2, 3]
@@ -42,9 +42,9 @@ No new modules. Measurement uses the existing dev hook `window.__cam` (`gl.info.
 | `public/models` | 16 MB | ≤ 18 MB | |
 
 ## Success Criteria
-- [ ] Table filled; every value inside budget or an accepted deviation is written next to it
-- [ ] All six acceptance criteria in `plan.md` checked with evidence in the perf report
-- [ ] Docs updated; `bun run build` clean
+- [x] Table filled; every value inside budget or an accepted deviation is written next to it
+- [x] All six acceptance criteria in `plan.md` checked with evidence in the perf report
+- [x] Docs updated; `bun run build` clean
 
 ## Risk Assessment
 - Budget miss on triangles: first lever is the extra trees (drop the two least visible), second is tile-course lips on far houses; the hero and characters are not touched.
