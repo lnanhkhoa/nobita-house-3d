@@ -8,6 +8,11 @@ import type { TimeOfDayState } from './use-time-of-day';
 const STREET_LAMP_HEIGHT = 4.63;
 /** How far the lamp bracket reaches over the carriageway, from the same builder. */
 const STREET_LAMP_REACH = 0.85;
+/**
+ * Below this `lampLevel` the lamps count as off. `lampLevel` eases exponentially, so it only
+ * ever approaches 0; without a threshold the lights would never leave the light list.
+ */
+const LAMPS_OFF_BELOW = 0.01;
 
 /** Warm practicals on Nobita's lot, positioned to match the fixtures modelled in the GLBs. */
 const LOT_LAMPS = [
@@ -80,8 +85,13 @@ interface Captured {
 
 /**
  * Night practicals: point lights at the modelled fixtures, plus an emissive lift on window
- * glass, neighbour windows and the street-lamp lenses. Everything scales with `tod.lampLevel`,
- * which is 0 in daylight, so nothing changes during the day.
+ * glass, neighbour windows and the street-lamp lenses. Everything scales with `tod.lampLevel`.
+ *
+ * When the lamps are off the point lights are made invisible, not just dimmed. three.js loops
+ * over every light in the scene in every lit fragment shader whatever its intensity, so eight
+ * lights at intensity 0 cost 30–40 % of a daylight frame for no visible effect (measured
+ * 2026-09-11). Leaving the light list does change the shader key, so crossing the threshold
+ * recompiles the lit materials once — acceptable on a button press, never mid-orbit.
  */
 export function NightLights({ tod }: { tod: TimeOfDayState }) {
   const scene = useThree((s) => s.scene);
@@ -92,8 +102,11 @@ export function NightLights({ tod }: { tod: TimeOfDayState }) {
   useFrame(() => {
     // `userData.baseIntensity` is the source of truth: this line overwrites `intensity`
     // every frame, so tuning the light by setting `intensity` directly does nothing.
+    const lampsOn = tod.lampLevel >= LAMPS_OFF_BELOW;
     for (const light of lights.current) {
-      if (light) light.intensity = light.userData.baseIntensity * tod.lampLevel;
+      if (!light) continue;
+      light.visible = lampsOn;
+      light.intensity = light.userData.baseIntensity * tod.lampLevel;
     }
 
     // Keep scanning until every target is found: the four GLBs load behind independent
@@ -124,7 +137,7 @@ export function NightLights({ tod }: { tod: TimeOfDayState }) {
     if (Math.abs(tod.lampLevel - lastLevel.current) < 0.002) return;
     lastLevel.current = tod.lampLevel;
     for (const entry of captured.current) {
-      if (tod.lampLevel < 0.01) {
+      if (tod.lampLevel < LAMPS_OFF_BELOW) {
         // Restore exactly, rather than asymptotically approaching the original.
         entry.material.emissive.copy(entry.originalColor);
         entry.material.emissiveIntensity = entry.originalIntensity;
@@ -146,6 +159,9 @@ export function NightLights({ tod }: { tod: TimeOfDayState }) {
           }}
           position={lamp.position}
           color={lamp.color}
+          // Start out of the light list: the default preset is daylight, and mounting visible
+          // would compile every lit shader once with the lamps and then again without them.
+          visible={false}
           intensity={0}
           distance={lamp.distance}
           decay={2}
