@@ -1,13 +1,21 @@
 export type TimeOfDayId = 'dawn' | 'morning' | 'sunset' | 'night';
 
+/** drei `<Sky>` scattering parameters. Eased like everything else, because `<Sky>` is a
+ * BackSide box around the camera and therefore covers the whole frame. */
+export interface SkyParams {
+  turbidity: number;
+  rayleigh: number;
+  mieCoefficient: number;
+  mieDirectionalG: number;
+}
+
 export interface TimeOfDayPreset {
   id: TimeOfDayId;
   label: string;
   /** Sun direction in metres. Drives `<Sky>` and the shadow-casting key light together:
    * if the two ever diverge, the shadows contradict the sky. */
   sun: readonly [number, number, number];
-  /** drei `<Sky>` scattering parameters. */
-  sky: { turbidity: number; rayleigh: number; mieCoefficient: number; mieDirectionalG: number };
+  sky: SkyParams;
   /** Key directional light, the one that casts shadows. */
   key: { color: string; intensity: number };
   /** Bounce fill from the opposite side; never casts. */
@@ -20,12 +28,27 @@ export interface TimeOfDayPreset {
   lampLevel: number;
 }
 
+/** The default, held separately so the fallback never depends on array order. */
+const MORNING: TimeOfDayPreset = {
+  id: 'morning',
+  label: 'Morning',
+  sun: [9, 14, 10],
+  sky: { turbidity: 4, rayleigh: 1.2, mieCoefficient: 0.004, mieDirectionalG: 0.85 },
+  key: { color: '#FFF3DF', intensity: 2.2 },
+  fill: { color: '#DCE9FF', intensity: 0.5 },
+  hemisphere: { sky: '#CFE6FF', ground: '#8A7A5A', intensity: 0.75 },
+  background: '#BFE0FA',
+  fog: { color: '#CFE6FA', near: 48, far: 110 },
+  stars: false,
+  lampLevel: 0,
+};
+
 /**
  * Four times of day. The sun swings from a low east at dawn, up and over for morning,
  * down to a low west at sunset, then below the horizon at night where `<Sky>` renders
  * dark and `<Stars>` takes over.
  */
-export const timesOfDay: TimeOfDayPreset[] = [
+export const timesOfDay: readonly TimeOfDayPreset[] = [
   {
     id: 'dawn',
     label: 'Dawn',
@@ -39,19 +62,7 @@ export const timesOfDay: TimeOfDayPreset[] = [
     stars: false,
     lampLevel: 0.35,
   },
-  {
-    id: 'morning',
-    label: 'Morning',
-    sun: [9, 14, 10],
-    sky: { turbidity: 4, rayleigh: 1.2, mieCoefficient: 0.004, mieDirectionalG: 0.85 },
-    key: { color: '#FFF3DF', intensity: 2.2 },
-    fill: { color: '#DCE9FF', intensity: 0.5 },
-    hemisphere: { sky: '#CFE6FF', ground: '#8A7A5A', intensity: 0.75 },
-    background: '#BFE0FA',
-    fog: { color: '#CFE6FA', near: 48, far: 110 },
-    stars: false,
-    lampLevel: 0,
-  },
+  MORNING,
   {
     id: 'sunset',
     label: 'Sunset',
@@ -82,10 +93,7 @@ export const timesOfDay: TimeOfDayPreset[] = [
   },
 ];
 
-export const DEFAULT_TIME_OF_DAY: TimeOfDayId = 'morning';
-
-/** `timesOfDay` is non-empty and ids are exhaustive, so the fallback is only a type guard. */
-const FALLBACK = timesOfDay[1] as TimeOfDayPreset;
+export const DEFAULT_TIME_OF_DAY: TimeOfDayId = MORNING.id;
 
 export const timeOfDayById = (id: TimeOfDayId): TimeOfDayPreset =>
-  timesOfDay.find((preset) => preset.id === id) ?? FALLBACK;
+  timesOfDay.find((preset) => preset.id === id) ?? MORNING;

@@ -1,14 +1,12 @@
 import { useFrame } from '@react-three/fiber';
 import { type RefObject, useEffect, useRef } from 'react';
 import type { Group } from 'three';
+import { useReducedMotionRef } from '../utils/reduced-motion';
 
 /** One greeting cycle: crouch, hop, settle. */
 const GREET_SECONDS = 0.95;
 const BREATH_HZ = 1.55;
 const SWAY_HZ = 0.62;
-
-const prefersReducedMotion = () =>
-  typeof window !== 'undefined' && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
 interface Options {
   /** Character height in metres; motion amplitudes scale with it. */
@@ -29,16 +27,7 @@ interface Options {
 export function useCharacterMotion(ref: RefObject<Group | null>, opts: Options) {
   const { height, phase, selected, hovered, hasWelcome } = opts;
   const greetStart = useRef<number | null>(null);
-  const reduced = useRef(prefersReducedMotion());
-
-  useEffect(() => {
-    const query = window.matchMedia('(prefers-reduced-motion: reduce)');
-    const onChange = () => {
-      reduced.current = query.matches;
-    };
-    query.addEventListener('change', onChange);
-    return () => query.removeEventListener('change', onChange);
-  }, []);
+  const reduced = useReducedMotionRef();
 
   // Re-trigger the greeting every time this character becomes the selected one. Models with
   // a skeletal welcome bow keep breathing here but leave the greeting to the armature.

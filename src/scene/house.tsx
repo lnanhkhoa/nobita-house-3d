@@ -68,8 +68,12 @@ function HouseProxy() {
 
 export function House() {
   return (
-    <ModelOrProxy url={config.models.house} proxy={<HouseProxy />}>
-      {(gltf) => <primitive object={gltf.scene} />}
-    </ModelOrProxy>
+    // Named so `NightLights` can scope its material search here: material names are not
+    // unique across the GLBs, and a scene-wide search lit the whole block.
+    <group name="house-root">
+      <ModelOrProxy url={config.models.house} proxy={<HouseProxy />}>
+        {(gltf) => <primitive object={gltf.scene} />}
+      </ModelOrProxy>
+    </group>
   );
 }

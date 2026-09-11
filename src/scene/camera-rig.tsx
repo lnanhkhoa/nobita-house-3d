@@ -5,8 +5,7 @@ import { Vector3 } from 'three';
 import { config } from '../config';
 import { characterById } from '../data/characters';
 import { useAppStore } from '../state/store';
-
-const reducedMotion = () => window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+import { prefersReducedMotion } from '../utils/reduced-motion';
 
 /** Scratch vector for the per-frame target clamp; avoids allocating during a drag. */
 const scratchTarget = new Vector3();
@@ -45,7 +44,7 @@ export function CameraRig() {
       target[0],
       target[1],
       target[2],
-      resetToken > 0 && !reducedMotion(),
+      resetToken > 0 && !prefersReducedMotion(),
     );
   }, [resetToken]);
 
@@ -54,7 +53,7 @@ export function CameraRig() {
     const def = selectedId ? characterById(selectedId) : undefined;
     if (!c) return;
     if (!def) {
-      c.setFocalOffset(0, 0, 0, !reducedMotion());
+      c.setFocalOffset(0, 0, 0, !prefersReducedMotion());
       return;
     }
     const [x, , z] = def.position;
@@ -63,8 +62,8 @@ export function CameraRig() {
     const dist = def.height * 2.9;
     // On desktop the info card covers the right third, so shift the subject left of centre.
     const offsetX = window.innerWidth >= 1024 ? def.height * 0.55 : 0;
-    c.setFocalOffset(offsetX, 0, 0, !reducedMotion());
-    c.setLookAt(x + dist * 0.28, eye + def.height * 0.28, z + dist, x, eye, z, !reducedMotion());
+    c.setFocalOffset(offsetX, 0, 0, !prefersReducedMotion());
+    c.setLookAt(x + dist * 0.28, eye + def.height * 0.28, z + dist, x, eye, z, !prefersReducedMotion());
   }, [selectedId]);
 
   useEffect(() => {

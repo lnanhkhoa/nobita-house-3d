@@ -21,7 +21,7 @@ created: "2026-09-11T00:20:00.000Z"
 **Non-goals.** Continuous time slider, automatic day/night cycle, per-hour granularity, geometry changes, moving the characters.
 
 **Acceptance criteria.**
-1. Four toolbar buttons; exactly one carries `aria-pressed="true"`; clicking switches the scene.
+1. Four toolbar controls; exactly one is selected; clicking switches the scene.
 2. Presets differ observably: sky colour, shadow direction (sun moves), light warmth.
 3. Night renders stars and emits light from window glass, gate lamp and stone lantern.
 4. Default on load stays the current daytime look, so nothing regresses.
@@ -47,7 +47,7 @@ created: "2026-09-11T00:20:00.000Z"
 3. **`src/scene/sky-dome.tsx`** — `<Sky>` driven by the active preset, `<Stars>` at night, background and fog colour eased per frame.
 4. **`src/scene/lighting.tsx`** — read the preset, ease light colours, intensities and the sun position every frame.
 5. **`src/scene/night-lights.tsx`** — point lights at the porch lamp and stone lantern; emissive lift on `house_glass`/`house_curtain` scaled by `lampLevel`.
-6. **`ViewControls`** — a second button group behind a hairline divider; four presets with `aria-pressed`.
+6. **`ViewControls`** — a second group behind a hairline divider. Implemented as real radio inputs styled as chips rather than `aria-pressed` buttons: exactly one time of day is active, and arrow-key navigation comes for free.
 7. **Tests** — preset table integrity (unique ids, sun above horizon for day presets, night flagged).
 8. **Docs** — record the new surface in `docs/design-guidelines.md`.
 
@@ -55,12 +55,27 @@ created: "2026-09-11T00:20:00.000Z"
 
 | Criterion | Evidence |
 |---|---|
-| Four controls, one active | radio group renders; `aria-checked` follows the store |
+| Four controls, one active | radio group renders; a real ArrowRight keypress moved focus morning → sunset and the scene followed |
 | Presets differ | night background `#0f1426` vs morning `#bfe0fa`; key light 0.55 @ `[-19.4, 6, -15.5]` vs 2.2 @ `[12, 18.8, 13.4]` |
-| Night lights | 3 point lights at 9/6/5, stars object present and visible with 2400 points, lit windows and porch visible in capture |
+| Night lights | 3 point lights at 9/6/5; exactly `house_glass` and `house_curtain` carry a non-black emissive at night, and both restore to `#000000` @ 1.0 in daylight; all 2400 stars sit 121–180 m from the camera, inside `far` 200 |
 | Default unchanged | loads on `morning`; emissive returns to ~0.003 after switching back |
 | Frame pacing | median 16.6 ms, p99 18.9 ms, zero frames over 20 ms while orbiting at night (200 calls, 767k tris) |
 | Gates | lint, typecheck, 16 tests, build all clean |
+
+## Review findings, fixed
+
+A `code-reviewer` pass found four browser-visible defects that every gate had passed:
+
+1. **Emissive leaked across GLBs.** `env_plate` is not unique to the gate nameplate — `streets.glb` and `neighbours.glb` reuse it for pole plates and neighbour signage, so a scene-wide match by material name lit the whole block. Measured three lit instances. `EMISSIVE` is now house-only and the search is scoped to a named `house-root` group.
+2. **Load-order race.** The cache gate `touched.length === 0` stopped scanning after whichever GLB resolved first, so the windows could stay dark forever. Now it scans until every target name is found.
+3. **Stale dead-band.** Materials captured after the ease settled were never written. Capturing now resets the level so the next frame writes.
+4. **The whole starfield was clipped.** `radius 200 + depth 70` put every star 214–289 m from a camera with `far` 200; nothing rasterised. Now 120/40, measured at 121–180 m.
+
+Also: emissive is snapshotted and restored exactly instead of approached; the sky scattering scalars ease like everything else (`<Sky>` is a BackSide box around the camera, so it — not `scene.background` — is what the viewer sees); `prefers-reduced-motion` moved to one shared helper with a live listener, replacing four copies; lamps no longer carry an unrelated `standY` offset; dead `aria-checked` CSS removed and a forced-colors selection cue added.
+
+## Known, pre-existing
+
+A React "change in the order of Hooks" error fires once at mount. Reproduced at `ddbad9f` in a clean worktree, i.e. before both this feature and the block work, so it predates today. Not chased here; worth a separate pass.
 
 ## Risk
 

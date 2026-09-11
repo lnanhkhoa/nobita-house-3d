@@ -4,6 +4,7 @@ import { type Group, LoopOnce, type Mesh } from 'three';
 import { config } from '../config';
 import type { CharacterDef } from '../data/characters';
 import { useAppStore } from '../state/store';
+import { prefersReducedMotion } from '../utils/reduced-motion';
 import { type LoadedGltf, ModelOrProxy } from './model-or-proxy';
 import { useCharacterMotion } from './use-character-motion';
 
@@ -46,7 +47,7 @@ function LoadedCharacter({ gltf, selected }: { gltf: LoadedGltf; selected: boole
   useEffect(() => {
     const welcome = actions.welcome;
     if (!selected || !welcome) return;
-    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    if (prefersReducedMotion()) return;
     welcome.reset();
     welcome.setLoop(LoopOnce, 1);
     welcome.play();
