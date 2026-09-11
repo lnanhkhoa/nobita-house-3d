@@ -131,12 +131,12 @@ export const layout = {
    */
   canopyRatio: { tree: 0.55, sakura: 0.5 },
   /**
-   * Every tree in the block. The first four are Nobita's yard; the rest fill the pockets of
-   * the neighbour lots. The west-back and south-west lots are deliberately bare: they are the
-   * two least visible from any orbit and were the first thing cut when the block went over
-   * its triangle budget. `height` drives the scale applied to whichever model loads, so keep
-   * every trunk at least `canopyRatio[kind] * height` clear of the house on its own lot —
-   * `scene.test.ts` enforces exactly that. `radius` only sizes the proxy fallback.
+   * Every tree in the block. The first four are Nobita's yard; every neighbour lot carries
+   * planting of its own, so no yard reads bare from any orbit. `height` drives the scale
+   * applied to whichever model loads, so keep every trunk at least `canopyRatio[kind] *
+   * height` clear of the house on its own lot — `scene.test.ts` enforces exactly that.
+   * `radius` only sizes the proxy fallback. Trees outside the hero lot cast no shadows, so
+   * this table's length is a draw-call cost only.
    */
   trees: [
     { position: [-6.7, 0, 3.0] as const, height: 3.3, radius: 1.3, kind: 'sakura' as const },
@@ -145,18 +145,41 @@ export const layout = {
     { position: [6.7, 0, -6.5] as const, height: 4.8, radius: 1.9, kind: 'tree' as const },
     { position: [9.3, 0, -5.3] as const, height: 4.6, radius: 1.8, kind: 'tree' as const },
     { position: [20.7, 0, 4.3] as const, height: 3.4, radius: 1.3, kind: 'tree' as const },
+    { position: [9.5, 0, 4.3] as const, height: 3.0, radius: 1.2, kind: 'sakura' as const },
     { position: [20.4, 0, -9.9] as const, height: 4.0, radius: 1.6, kind: 'tree' as const },
+    { position: [20.4, 0, -19.6] as const, height: 4.0, radius: 1.6, kind: 'tree' as const },
+    { position: [9.8, 0, -9.7] as const, height: 3.0, radius: 1.2, kind: 'tree' as const },
     { position: [-5.8, 0, -9.8] as const, height: 5.0, radius: 2.0, kind: 'tree' as const },
     { position: [5.9, 0, -9.6] as const, height: 4.4, radius: 1.7, kind: 'sakura' as const },
+    { position: [-5.8, 0, -19.6] as const, height: 4.0, radius: 1.6, kind: 'tree' as const },
+    { position: [5.9, 0, -19.6] as const, height: 3.4, radius: 1.4, kind: 'tree' as const },
+    { position: [-29.5, 0, -19.0] as const, height: 4.2, radius: 1.7, kind: 'tree' as const },
+    { position: [-29.5, 0, -11.2] as const, height: 3.8, radius: 1.5, kind: 'tree' as const },
+    { position: [-24.5, 0, -9.5] as const, height: 3.0, radius: 1.2, kind: 'sakura' as const },
     { position: [-29.5, 0, 4.4] as const, height: 4.8, radius: 1.9, kind: 'tree' as const },
+    { position: [-29.5, 0, -4.0] as const, height: 4.4, radius: 1.8, kind: 'tree' as const },
+    { position: [-18.8, 0, 4.7] as const, height: 3.2, radius: 1.3, kind: 'tree' as const },
+    { position: [-29.7, 0, 17.2] as const, height: 4.2, radius: 1.7, kind: 'tree' as const },
+    { position: [-29.7, 0, 27.0] as const, height: 4.2, radius: 1.7, kind: 'tree' as const },
+    { position: [-19.4, 0, 27.2] as const, height: 3.2, radius: 1.3, kind: 'sakura' as const },
     { position: [21.6, 0, 27.0] as const, height: 4.4, radius: 1.7, kind: 'tree' as const },
+    { position: [10.7, 0, 27.0] as const, height: 3.6, radius: 1.4, kind: 'tree' as const },
+    { position: [21.6, 0, 17.4] as const, height: 4.0, radius: 1.6, kind: 'tree' as const },
   ],
-  /** Clipped shrub rows inside a front wall; each row is spaced along X. */
+  /**
+   * Clipped shrub rows inside a front wall, running along the wall: along X by default,
+   * `axis: 'z'` for lots whose gate wall stands on an X edge. Each row stops clear of the
+   * gate opening, which `scene.test.ts` keeps outside the house footprint.
+   */
   hedges: [
-    { start: [-6.4, 0, 5.05] as const, count: 7, spacing: 0.72, height: 0.78 },
-    { start: [3.4, 0, 5.05] as const, count: 4, spacing: 0.68, height: 0.72 },
-    { start: [9.4, 0, 5.05] as const, count: 6, spacing: 0.75, height: 0.75 },
-    { start: [10.2, 0, 16.35] as const, count: 6, spacing: 0.75, height: 0.72 },
+    { start: [-6.4, 0, 5.05] as const, count: 7, spacing: 0.72, height: 0.78, axis: 'x' as const },
+    { start: [3.4, 0, 5.05] as const, count: 4, spacing: 0.68, height: 0.72, axis: 'x' as const },
+    { start: [9.4, 0, 5.05] as const, count: 6, spacing: 0.75, height: 0.75, axis: 'x' as const },
+    { start: [10.2, 0, 16.35] as const, count: 6, spacing: 0.75, height: 0.72, axis: 'x' as const },
+    { start: [-18.05, 0, -5.9] as const, count: 5, spacing: 0.75, height: 0.72, axis: 'z' as const },
+    { start: [-30.4, 0, 16.35] as const, count: 5, spacing: 0.75, height: 0.75, axis: 'x' as const },
+    { start: [-6.6, 0, -20.45] as const, count: 4, spacing: 0.75, height: 0.75, axis: 'x' as const },
+    { start: [9.9, 0, -20.45] as const, count: 5, spacing: 0.75, height: 0.72, axis: 'x' as const },
   ],
 } as const;
 

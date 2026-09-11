@@ -144,8 +144,9 @@ describe('planting', () => {
   it('runs every hedge row inside a lot, clear of the neighbour walls', () => {
     for (const row of layout.hedges) {
       for (let i = 0; i < row.count; i++) {
-        const x = row.start[0] + i * row.spacing;
-        const z = row.start[2];
+        const alongZ = row.axis === 'z';
+        const x = row.start[0] + (alongZ ? 0 : i * row.spacing);
+        const z = row.start[2] + (alongZ ? i * row.spacing : 0);
         const host = hostLot(x, z);
         expect(host, `hedge at ${x},${z} is on no lot`).toBeDefined();
         if (!host || host.lot === nobitaLot) continue;

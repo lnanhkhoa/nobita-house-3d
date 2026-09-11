@@ -132,7 +132,11 @@ export function Foliage() {
     Array.from({ length: row.count }, (_, i) => ({
       key: `${rowIndex}-${i}`,
       seed: rowIndex * 31 + i,
-      position: [row.start[0] + i * row.spacing, row.start[1], row.start[2]] as const,
+      position: [
+        row.start[0] + (row.axis === 'z' ? 0 : i * row.spacing),
+        row.start[1],
+        row.start[2] + (row.axis === 'z' ? i * row.spacing : 0),
+      ] as const,
       height: row.height,
     })),
   );
