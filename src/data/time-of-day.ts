@@ -85,13 +85,15 @@ export const timesOfDay: readonly TimeOfDayPreset[] = [
   {
     id: 'night',
     label: 'Night',
-    sun: [-10, -4, -8],
+    // The moonlight. The moon is drawn on this azimuth (see `displayMoonDirection`), which puts
+    // it left of the house in the default view, so shadows fall away from where it hangs.
+    sun: [-4.4, -4, -13.5],
     zenith: '#03060F',
     sunGlow: { color: '#000000', strength: 0 },
     sunDisc: { color: '#000000', strength: 0 },
     // Clouds off so the stars read against a clear sky.
     clouds: { tint: '#2A3350', opacity: 0 },
-    // A dim, cool "moon" from the opposite side keeps silhouettes readable.
+    // A dim, cool moonlight keeps silhouettes readable.
     key: { color: '#9FB4E8', intensity: 0.55 },
     fill: { color: '#5C6EA8', intensity: 0.28 },
     hemisphere: { sky: '#2C3A63', ground: '#171B26', intensity: 0.35 },

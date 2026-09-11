@@ -10,6 +10,21 @@ import type { Vector3 } from 'three';
  */
 export const SUN_MAX_ELEVATION = (7 * Math.PI) / 180;
 
+/**
+ * Elevation the moon is drawn at. At night the preset's `sun` vector is the moonlight, below
+ * the horizon so the sky shader draws no sun, which gives the moon an azimuth but no usable
+ * height. It sits lower than the sun's cap because the drawn disc and its halo are larger: at
+ * 7 degrees the halo ran off the top of the default view.
+ */
+export const MOON_ELEVATION = (4.5 * Math.PI) / 180;
+
+/** Writes the drawn moon direction into `out`: the moonlight's azimuth at `MOON_ELEVATION`. */
+export function displayMoonDirection(moonlight: Vector3, out: Vector3) {
+  const across = Math.hypot(moonlight.x, moonlight.z) || 1;
+  const scale = Math.cos(MOON_ELEVATION) / across;
+  return out.set(moonlight.x * scale, Math.sin(MOON_ELEVATION), moonlight.z * scale);
+}
+
 /** Writes the drawn sun direction into `out`: true azimuth, elevation capped for display. */
 export function displaySunDirection(sun: Vector3, out: Vector3) {
   out.copy(sun).normalize();

@@ -116,6 +116,12 @@ Cost: clouds interleaved on/off over three rounds, 16.6–16.7 ms median both wa
 - **Clouds thin out around the sun**, each fading to 22% opacity within 6 degrees of it, because a single cloud drifting past otherwise covered the disc for minutes. That needed a material per cloud, at no extra draw calls since sprites are separate draws anyway.
 - **The cloud texture was clipped.** A fixed canvas cut the lowest puffs and left a straight horizontal edge on every cloud; the canvas is now sized to the puffs' bounding box.
 
+## Moon, 2026-09-11
+
+- **A full moon billboard** (`src/scene/moon.tsx`): ivory disc darkened towards the limb, soft maria after the near side, cool halo, all drawn into a canvas at startup (no asset, no Gemini). ~1.9 degrees radius, stylised like the sun. Travels with the camera at 110 m like the stars; fades in with them. One extra draw call.
+- **Placed in the moonlight's direction.** The night preset's `sun` vector is the key light, below the horizon, so the moon takes its azimuth at a fixed drawn elevation of 4.5 degrees (`displayMoonDirection`). The old night azimuth `(-10, -8)` projected off the left of the default view, so it moved to `(-4.4, -13.5)`, ~18 degrees left of straight ahead. A/B screenshots of the facade under both directions look the same; the night front is lit by the lamps and fill, not the key.
+- **Measured on screen:** at 1280×720 the moon sits left of the house, behind the power lines (they are opaque and nearer, so they cross it); at 1280×577 its centre projects to (361, 95), clear of the title card and toolbar. Drawn after the stars so the disc covers any star behind it; hidden by day.
+
 ## Known, pre-existing
 
 A React "change in the order of Hooks" error fires once at mount. Reproduced at `ddbad9f` in a clean worktree, i.e. before both this feature and the block work, so it predates today. Not chased here; worth a separate pass.

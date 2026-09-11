@@ -12,6 +12,7 @@ import {
   Vector3,
 } from 'three';
 import { Clouds } from './clouds';
+import { Moon } from './moon';
 import { displaySunDirection } from './sun-direction';
 import type { TimeOfDayState } from './use-time-of-day';
 
@@ -158,6 +159,7 @@ export function SkyDome({ tod }: { tod: TimeOfDayState }) {
         <sphereGeometry args={[SKY_RADIUS, 48, 24]} />
       </mesh>
       <Clouds tod={tod} />
+      <Moon tod={tod} />
       {/* The rig follows the camera, so stars keep a fixed distance from any orbit and show
           no parallax, which is right for things at infinity. */}
       <group ref={starsRig}>
