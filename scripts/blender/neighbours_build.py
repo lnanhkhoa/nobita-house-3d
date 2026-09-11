@@ -204,13 +204,18 @@ def add_courses(coll, spec, base_y, mat_name):
     span = (r["depth"] if r["axis"] == "x" else r["width"]) / 2
     slope = math.hypot(span, r["height"])
     steps = max(int(slope / 0.29), 1)
-    across = r["width"] if r["axis"] == "x" else r["depth"]
+    eave_across = r["width"] if r["axis"] == "x" else r["depth"]
     # A ridge along local X means the slopes fall toward local +/-Z, and the other way round.
     fall = "z" if r["axis"] == "x" else "x"
     for i in range(1, steps):
-        s = i * (slope / steps)
-        drop = span * (s / slope)
-        y = base_y + r["height"] * (s / slope)
+        t = i / steps
+        s = t * slope
+        drop = span * t
+        y = base_y + r["height"] * t
+        # On a hip the slope is a trapezoid narrowing from the eave to the ridge, so each
+        # course has to shorten with it. A gable has ridge == eave_across and stays full
+        # width. Holding it constant left the upper courses hanging past the hip lines.
+        across = eave_across + (r["ridge"] - eave_across) * t
         for sign in (1, -1):
             offset = sign * (span - drop)
             local = (0.0, offset, y + 0.02) if fall == "z" else (offset, 0.0, y + 0.02)
