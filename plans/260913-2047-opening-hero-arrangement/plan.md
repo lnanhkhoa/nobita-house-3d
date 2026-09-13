@@ -20,15 +20,22 @@ blocks: []
 
 | Left → right | x | Where | Pose | Clip |
 |---|---|---|---|---|
-| Gian (`jaian`) | 0.2 | On the front wall coping, just left of the left gate post | Sitting, laughing | `sit-wall-laugh` |
-| Shizuka | 0.95 | Sidewalk, below and right of Gian | Standing | `stand-happy` |
-| Nobita | 1.7, z 6.4 | At the gate, on the ground | Sitting, legs out | `sit` (not `sit-ground-happy`: cross-legged, shoes clip on his short legs) |
-| Doraemon | 2.45 | Beside Nobita | Standing | `stand-cheerful` |
-| Dekisugi | 3.33, z 5.94 | Against the wall, just right of the right gate post (Suneo's spot in the image) | Leaning on the wall, one foot propped | `stand-calm` |
-| Suneo | 4.03 | On the front wall coping, between Dekisugi and the pier at 4.5 | Sitting, talking | `sit-wall-talk` |
+| Gian (`jaian`) | 0.05 | On the front wall coping, left of the gate | Sitting, laughing | `sit-wall-laugh` |
+| Shizuka | 0.75 | Sidewalk, below and right of Gian | Standing, thinking | `think` |
+| Nobita | 1.7, z 6.4 | At the gate, on the ground | Sitting, knees up, feet forward | `sitting-pose`, lowered 3.1 cm (earlier `sit`, and `sit-ground-happy`, whose crossed shoes clipped) |
+| Doraemon | 2.6 | Beside Nobita, clear of his spread feet | Standing | `stand-cheerful` |
+| Suneo | 4.03 | On the front wall coping, between the right gate post and the pier at 4.5 | Sitting, talking | `sit-wall-talk` |
+| Dekisugi | 4.73, z 6.8 | Out on the sidewalk, right of Suneo | Standing, talking | `talk` (earlier a wall lean in `stand-calm` at 3.33) |
 
-Neighbours are ≥ 0.7 m apart in x (Dekisugi–Suneo is the tightest): the walk loop keeps that spacing,
-and round its 0.45 m fillets 0.7 m of path still clears the 0.6 m walk-route test.
+Shizuka's and Dekisugi's clips and spots were changed outside this session on 2026-09-13; the x
+values above then moved Gian and Dekisugi just enough to restore walk spacing. Neighbours are
+≥ 0.7 m apart in x (Gian–Shizuka and Suneo–Dekisugi are the tightest): the walk loop keeps that
+spacing, and round its 0.45 m fillets 0.7 m of path still clears the 0.6 m walk-route test. Between
+Doraemon and Suneo only x 3.30–3.33 met that spacing, and there `talk` put Dekisugi's hand into
+Doraemon's, so he moved right of Suneo (user decision).
+
+The gate behind Nobita is now two wrought-iron leaves standing open 70° into the yard, after the
+reference image (`scripts/blender/env_build.py`, `iron` in `env_helpers.py`).
 
 Walk mode is **temporarily removed** from the UI (user decision, 2026-09-13): no seated-to-walking
 transition is built. The walk code and its tests stay in the repo, untouched in behaviour.

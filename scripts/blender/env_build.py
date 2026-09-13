@@ -69,7 +69,9 @@ def build_gate_props(coll):
 
 def build_yard_props(coll):
     """Lived-in details around the house. Must run before the export Y-flip; every mesh is
-    symmetric about its own Y so only object locations mirror."""
+    symmetric about its own Y so only object locations mirror. Moving a prop that stands on
+    the lawn means moving its keep-out in `src/scene/lawn-placement.ts` too, or grass grows
+    through it."""
     # Clothesline between the house back and the shed: two T-poles, a pole, two towels.
     for k, px in enumerate((-2.0, 1.5)):
         add_cylinder(coll, f"laundry_post_{k}", 0.045, 1.70, (px, -5.2, 0.85), "metal", verts=8)
@@ -123,11 +125,6 @@ def build_yard_props(coll):
     add_box(coll, "gravel_left", (0.35, 7.2, 0.03), (-4.42, 0.0, 0.015), "stone")
     add_box(coll, "gravel_right", (0.35, 7.2, 0.03), (4.42, 0.0, 0.015), "stone")
     add_box(coll, "gravel_back", (9.2, 0.35, 0.03), (0.0, -3.78, 0.015), "stone")
-
-    # Mottled lawn: flat darker patches so the grass stops reading as one flat sheet.
-    for k, (gx, gy, r) in enumerate(((-3.0, 1.5, 1.2), (2.5, -2.0, 1.0), (-5.0, -3.5, 1.4),
-                                     (5.5, 1.0, 0.9), (0.5, -6.3, 1.1), (-6.3, 0.2, 0.8))):
-        add_cylinder(coll, f"lawn_patch_{k}", r, 0.012, (gx, gy, 0.006), "grass_dark", verts=14)
 
 
 def build():
@@ -211,15 +208,40 @@ def build():
     add_box(coll, "wall_right", (WALL_T, LOT_D, WALL_H), (half_w, FRONT_Y - half_d, WALL_H / 2), "concrete")
     add_box(coll, "wall_back", (LOT_W, WALL_T, WALL_H), (0, back_y, WALL_H / 2), "concrete")
 
-    # gate: two posts, a sliding wooden leaf, and the 野比 nameplate
+    # gate: two posts, two open wrought-iron leaves, and the 野比 nameplate
     post_h = WALL_H + 0.25
     for sign, tag in ((-1, "l"), (1, "r")):
         add_box(coll, f"gate_post_{tag}", (0.26, 0.26, post_h),
                 (GATE_X + sign * (GATE_W / 2 + 0.13), FRONT_Y, post_h / 2), "concrete_dark")
-    add_box(coll, "gate_leaf", (GATE_W, 0.06, 1.45), (GATE_X, FRONT_Y, 0.78), "wood")
-    for i in range(5):
-        add_box(coll, f"gate_slat_{i}", (GATE_W - 0.08, 0.09, 0.16),
-                (GATE_X, FRONT_Y, 0.28 + i * 0.28), "wood")
+
+    # The leaves follow `assets/home.jpg`: vertical bars in a flat frame, hinged on the inner
+    # faces of the posts and standing open 70° into the yard, so nothing reaches the sidewalk
+    # where the characters gather. Built street-at-+Y like everything else here, so "into the
+    # yard" is -Y until the flip below.
+    def iron_leaf(tag, hinge_x, closed_dir):
+        leaf_w, leaf_h, leaf_z0 = GATE_W / 2 - 0.03, 1.30, 0.06
+        hinge_y = FRONT_Y - 0.10  # in the inner half of the post, so the leaf swings clear of it
+        open_rad = math.radians(70)
+        dx, dy = closed_dir * math.cos(open_rad), -math.sin(open_rad)
+        angle = math.atan2(dy, dx)
+
+        def member(name, along, size, z):
+            obj = add_box(coll, f"gate_{tag}_{name}", size,
+                          (hinge_x + dx * along, hinge_y + dy * along, z), "iron")
+            obj.rotation_euler.z = angle
+            return obj
+
+        for stile, along in (("hinge_stile", 0.02), ("latch_stile", leaf_w - 0.02)):
+            member(stile, along, (0.04, 0.04, leaf_h), leaf_z0 + leaf_h / 2)
+        for rail, z in (("bottom_rail", leaf_z0 + 0.02), ("top_rail", leaf_z0 + leaf_h - 0.02)):
+            member(rail, leaf_w / 2, (leaf_w, 0.035, 0.04), z)
+        bars = 6
+        for k in range(1, bars + 1):
+            along = 0.02 + k * (leaf_w - 0.04) / (bars + 1)
+            member(f"bar_{k}", along, (0.018, 0.018, leaf_h - 0.08), leaf_z0 + leaf_h / 2)
+
+    iron_leaf("l", GATE_X - GATE_W / 2, 1)
+    iron_leaf("r", GATE_X + GATE_W / 2, -1)
     add_box(coll, "nameplate", (0.26, 0.03, 0.34),
             (GATE_X + GATE_W / 2 + 0.28, FRONT_Y - 0.12, 1.15), "plate")
 
@@ -229,11 +251,14 @@ def build():
     build_yard_props(coll)
 
     # Blender is Z-up/Y-forward and the glTF exporter maps Blender +Y to glTF -Z, which would
-    # put the street behind the house. Every primitive here is symmetric about its own Y axis,
-    # so negating each object's Y is enough to land the street at +Z in the exported file.
+    # put the street behind the house. Negating each object's Y mirrors it across the XZ plane,
+    # which is enough for primitives symmetric about their own Y axis. The same mirror turns a
+    # rotation about Z the other way, so that is negated too for the open gate leaves; the vent
+    # crosses turn about Y, which the mirror leaves alone.
     # Anything built after this loop would export mirrored, so it must stay last.
     for obj in coll.objects:
         obj.location.y = -obj.location.y
+        obj.rotation_euler.z = -obj.rotation_euler.z
     bpy.context.view_layer.update()
     apply_world_uvs(coll.objects)
 

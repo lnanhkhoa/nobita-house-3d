@@ -50,9 +50,9 @@ const onWall = (seat: number, originZ: number, anchorZ: number): [number, number
   originZ - anchorZ,
 ];
 
-// Order = left-to-right in `assets/home.jpg`, gathered tight round the gate (x 1.35–2.75), with
-// Dekisugi added where Suneo stands in the image and Suneo moved onto the wall (user decisions
-// 2026-09-13). Each character holds its own resting clip, downloaded to match the image.
+// Order = left-to-right round the gate (x 1.35–2.75), after `assets/home.jpg` with the user's
+// changes of 2026-09-13: Dekisugi added, Suneo moved onto the wall, Dekisugi talking out on the
+// sidewalk right of him. Each character holds its own resting clip.
 //
 // Spacing: neighbours in this list are at least 0.7 m apart in x. They share one walk loop at
 // a fixed distance apart, and round its 0.45 m fillets 0.7 m of path still leaves ~0.63 m
@@ -68,9 +68,9 @@ export const characters: CharacterDef[] = [
     // Mixamo humanoid rig on Dekisugi's shared clips: the `walk` root travel the merge script
     // strips on his rig (0.80 m) times his leg ratio (1.236). Estimated, like Shizuka's.
     stride: 0.99,
-    // Anchored at the foot of the wall left of the gate. Laughing he spans x −0.51..+0.46, so
-    // his right side stays 0.43 m clear of the left gate post (x 1.09–1.35, 1.85 m tall).
-    position: [0.2, layout.standY, 6.2],
+    // Anchored at the foot of the wall left of the gate, 0.7 m left of Shizuka. Laughing he spans
+    // x −0.51..+0.46, well clear of the left gate post (x 1.09–1.35, 1.85 m tall).
+    position: [0.05, layout.standY, 6.2],
     rotationY: 0,
     // On the wall, laughing. `sit-wall-laugh` rocks the seat between 0.10 and 0.14 m, so the
     // middle is used; it tucks the feet back under the seat, where they disappear into the wall.
@@ -88,11 +88,12 @@ export const characters: CharacterDef[] = [
     // her leg ratio (1.023). Estimated, like Suneo's — the ground clamp keeps the toe from
     // resting still long enough to measure.
     stride: 0.99,
-    // Below and right of Gian, as in the image. Her right side (x +0.32) stays 0.16 m clear of
-    // Nobita's body, and her head (1.46 m) passes under Gian's lowest point on the wall (1.55 m).
-    position: [0.95, layout.standY, 6.7],
+    // Below and right of Gian, thinking. `think` spans x −0.33..+0.39, so her right side (1.14)
+    // stays 0.23 m clear of Nobita, and her head (1.49 m) passes under Gian's lowest point on the
+    // wall (1.55 m).
+    position: [0.75, layout.standY, 6.7],
     rotationY: 0.1,
-    rest: { clip: 'stand-happy', offset: [0, 0, 0] },
+    rest: { clip: 'think', offset: [0, 0, 0] },
     color: '#F07EA8',
     bio: 'The kind, level-headed girl next door and the one person who never gives up on Nobita. Loves baths, sweet potatoes and the violin, though nobody survives her playing.',
   },
@@ -105,14 +106,15 @@ export const characters: CharacterDef[] = [
     // Mixamo humanoid rig on Dekisugi's shared clips: the `walk` root travel the merge script
     // strips on his rig (0.71 m) times his leg ratio (1.432). Estimated, like Jaian's.
     stride: 1.02,
-    // Sitting on the ground in front of the gate in the floor `sit`, legs straight out. The
-    // clip leans back on its hands 0.59 m behind the origin, so z 6.4 keeps them in front of the
-    // gate leaf (z 5.8); the toes reach 7.13, still on the sidewalk. Not `sit-ground-happy`
-    // (user decision 2026-09-13): that clip sits cross-legged holding a foot, and on his short
-    // legs the big shoes pass through each other and the seat rides on the shins, 4 cm up.
+    // Sitting on the ground in front of the gate in `sitting-pose` (user choice 2026-09-13): knees
+    // up, feet forward, hands down by the feet. It reaches 0.07 m back (the gate leaf is at z 5.8)
+    // and 0.89 m forward, so from z 6.4 the toes stop at 7.29, short of the kerb at 7.7. Its lowest
+    // skin sits 3.1 cm above the origin after the merge, so the offset lowers him onto the pavement.
+    // Earlier: the floor `sit` leaned back on its hands, and `sit-ground-happy` crossed his legs
+    // until the shoes passed through each other.
     position: [1.7, layout.standY, 6.4],
     rotationY: 0,
-    rest: { clip: 'sit', offset: [0, 0, 0] },
+    rest: { clip: 'sitting-pose', offset: [0, -0.031, 0] },
     color: '#F5C21B',
     bio: 'Lazy, clumsy and hopeless at school, yet unbeatable at shooting and cat’s cradle. Nobita’s big heart is the reason Doraemon stays, and this is his house.',
   },
@@ -125,33 +127,13 @@ export const characters: CharacterDef[] = [
     // Mixamo humanoid rig on Dekisugi's shared clips since 2026-09-13: the `walk` root travel
     // the merge script strips on his rig (0.66 m) times his leg ratio (0.766). Estimated.
     stride: 0.51,
-    position: [2.45, layout.standY, 6.6],
+    // Beside Nobita. `sitting-pose` spreads Nobita to x +0.43, so Doraemon (x −0.43..+0.39
+    // cheering) stands at 2.6, 4 cm clear of him.
+    position: [2.6, layout.standY, 6.6],
     rotationY: -0.1,
     rest: { clip: 'stand-cheerful', offset: [0, 0, 0] },
     color: '#0A9DE8',
     bio: 'A cat-shaped robot sent from the 22nd century by Nobita’s great-great-grandson to steer his ancestor toward a better future. Carries every gadget in his four-dimensional pocket, is terrified of mice, and would do anything for a dorayaki.',
-  },
-  {
-    id: 'dekisugi',
-    name: 'Hidetoshi Dekisugi',
-    shortName: 'Dekisugi',
-    jpName: '出木杉 英才',
-    height: 1.42,
-    // Mixamo humanoid rig: the ground his `walk` clip covers per cycle, measured in Blender
-    // from the planted toe's speed on the posed rig (1.05 m left, 1.09 m right). Full-length
-    // stride, unlike the knee-less rigs.
-    stride: 1.07,
-    // Leaning back on the wall right of the gate. `stand-calm` is a wall lean with one foot
-    // propped behind him: the propped foot reaches 2.5 cm behind the origin and the shoulders sit
-    // 2 cm in front of it, so the origin goes 2.5 cm off the wall's street face (z 5.91) and he
-    // faces the street square, or one shoulder would sink into the blocks. Out in the open the
-    // same clip reads as a broken, one-legged crouch. His left side (x −0.27) stays 5 cm clear of
-    // the right gate post (x 2.75–3.01).
-    position: [3.33, layout.standY, 5.94],
-    rotationY: 0,
-    rest: { clip: 'stand-calm', offset: [0, 0, 0] },
-    color: '#3FA08C',
-    bio: 'Top of the class, kind to everyone, and effortlessly good at everything Nobita is not. The only rival Doraemon’s gadgets cannot beat, which is exactly why Nobita worries about him and Shizuka.',
   },
   {
     id: 'suneo',
@@ -165,9 +147,8 @@ export const characters: CharacterDef[] = [
     // 2026-09-13). The source `walk` travel times his leg ratio estimates 0.92 m, so if his feet
     // slide in walk mode, that is the number to try.
     stride: 1.07,
-    // Anchored at the foot of the wall between Dekisugi and the mid-run pier (x 4.34–4.66). He
-    // spans x −0.41..+0.26 talking: his left side stays 7 cm clear of Dekisugi's head, which sits
-    // at the height his hanging feet reach, and his hands stop short of the pier.
+    // Anchored at the foot of the wall between the right gate post (x 2.75–3.01) and the mid-run
+    // pier (x 4.34–4.66). Talking he spans x −0.41..+0.26, clear of both.
     position: [4.03, layout.standY, 6.2],
     rotationY: 0,
     // On the wall, talking: a clean chair sit, seat 0.25 m above the origin all loop long, shins
@@ -175,6 +156,27 @@ export const characters: CharacterDef[] = [
     rest: { clip: 'sit-wall-talk', offset: onWall(0.25, 5.74, 6.2) },
     color: '#5CB85C',
     bio: 'Rich, vain and quick to brag about whatever his family bought this week. Gian’s sidekick, Nobita’s rival, and secretly the most sensitive of the group.',
+  },
+  {
+    id: 'dekisugi',
+    name: 'Hidetoshi Dekisugi',
+    shortName: 'Dekisugi',
+    jpName: '出木杉 英才',
+    height: 1.42,
+    // Mixamo humanoid rig: the ground his `walk` clip covers per cycle, measured in Blender
+    // from the planted toe's speed on the posed rig (1.05 m left, 1.09 m right). Full-length
+    // stride, unlike the knee-less rigs.
+    stride: 1.07,
+    // Out on the sidewalk right of Suneo, talking (user decision 2026-09-13), 0.7 m from him in x.
+    // `talk` spans x −0.35..+0.48 and reaches 0.25 m back: from z 6.8 his back (6.55) stays 16 cm
+    // in front of Suneo's hanging feet (6.39) and well off the pier's face (5.97). Between Doraemon
+    // and Suneo there was no spot: the walk spacing left only x 3.30–3.33, where his hand met
+    // Doraemon's.
+    position: [4.73, layout.standY, 6.8],
+    rotationY: 0,
+    rest: { clip: 'talk', offset: [0, 0, 0] },
+    color: '#3FA08C',
+    bio: 'Top of the class, kind to everyone, and effortlessly good at everything Nobita is not. The only rival Doraemon’s gadgets cannot beat, which is exactly why Nobita worries about him and Shizuka.',
   },
 ];
 

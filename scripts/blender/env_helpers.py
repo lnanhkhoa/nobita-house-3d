@@ -35,7 +35,6 @@ exec(open(os.path.join(SCRIPTS_DIR, "texture_lib.py")).read())
 COLOURS = {
     # ground and structure
     "grass": (0.34, 0.58, 0.25, 1.0),
-    "grass_dark": (0.28, 0.50, 0.20, 1.0),
     "concrete": (0.74, 0.71, 0.66, 1.0),
     "concrete_dark": (0.60, 0.58, 0.54, 1.0),
     "wood": (0.55, 0.34, 0.16, 1.0),
@@ -47,10 +46,17 @@ COLOURS = {
     "mortar": (0.52, 0.50, 0.46, 1.0),
     "stone": (0.78, 0.77, 0.73, 1.0),
     "soil": (0.28, 0.20, 0.13, 1.0),
+    # Packed earth of the sandlot: concrete noise under a warm tint reads as trodden dirt.
+    "dirt": (0.62, 0.48, 0.32, 1.0),
+    # Sandlot: the yellowed board fence and the bamboo bundle from the reference art.
+    "board": (0.72, 0.58, 0.32, 1.0),
+    "bamboo": (0.76, 0.66, 0.38, 1.0),
     # lot props
     "shed_wall": (0.42, 0.30, 0.18, 1.0),
     "shed_roof": (0.48, 0.16, 0.11, 1.0),
     "postbox": (0.62, 0.14, 0.10, 1.0),
+    # The open wrought-iron gate from `assets/home.jpg`: painted near-black navy.
+    "iron": (0.025, 0.035, 0.06, 1.0),
     "leaf": (0.24, 0.52, 0.20, 1.0),
     "bark": (0.30, 0.20, 0.12, 1.0),
     "flower_red": (0.75, 0.15, 0.14, 1.0),
