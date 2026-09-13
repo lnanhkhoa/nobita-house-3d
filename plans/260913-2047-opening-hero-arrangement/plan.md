@@ -20,12 +20,15 @@ blocks: []
 
 | Left → right | x | Where | Pose | Clip |
 |---|---|---|---|---|
-| Gian (`jaian`) | −1.6 | On the front wall coping, left of the gate | Sitting, laughing | `sit-wall-laugh` |
-| Shizuka | −0.3 | Sidewalk | Standing | `stand-happy` |
-| Nobita | 1.7 | At the gate, on the ground | Sitting, knees up | `sit-ground-happy` |
+| Gian (`jaian`) | 0.2 | On the front wall coping, just left of the left gate post | Sitting, laughing | `sit-wall-laugh` |
+| Shizuka | 0.95 | Sidewalk, below and right of Gian | Standing | `stand-happy` |
+| Nobita | 1.7, z 6.4 | At the gate, on the ground | Sitting, legs out | `sit` (not `sit-ground-happy`: cross-legged, shoes clip on his short legs) |
 | Doraemon | 2.45 | Beside Nobita | Standing | `stand-cheerful` |
-| Dekisugi | 3.4 | By the right gate pier (Suneo's spot in the image) | Standing | `stand-calm` |
-| Suneo | 5.2 (off the pier at 4.5) | On the front wall coping, right of the gate | Sitting, talking | `sit-wall-talk` |
+| Dekisugi | 3.33, z 5.94 | Against the wall, just right of the right gate post (Suneo's spot in the image) | Leaning on the wall, one foot propped | `stand-calm` |
+| Suneo | 4.03 | On the front wall coping, between Dekisugi and the pier at 4.5 | Sitting, talking | `sit-wall-talk` |
+
+Neighbours are ≥ 0.7 m apart in x (Dekisugi–Suneo is the tightest): the walk loop keeps that spacing,
+and round its 0.45 m fillets 0.7 m of path still clears the 0.6 m walk-route test.
 
 Walk mode is **temporarily removed** from the UI (user decision, 2026-09-13): no seated-to-walking
 transition is built. The walk code and its tests stay in the repo, untouched in behaviour.

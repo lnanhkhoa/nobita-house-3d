@@ -86,21 +86,24 @@ effect returns early when `seated`. `useCharacterMotion` gains `seated`: no gree
 ## Implementation notes (2026-09-13)
 - Done ahead of the chair-sit clip: spots reordered, `RestPose` added, Nobita rests in `sit` with
   offset `[0,0,0]` (the merge script's ground clamp already puts the seat on the floor).
-- Gian (x −1.6, z 6.2) and Suneo (x 5.2, z 6.2 — moved off the pier at 4.5) have **no `rest` yet**:
-  they stand at the wall foot until `sit-chair` is merged and measured. Then add
-  `rest: { clip: 'sit-chair', offset }`, `layout.wall.copingTop`, the `sit-chair` catalog entry in
-  `animations.ts`, and the wall-seat test.
+- Gian (x −1.6) and Suneo (x 5.2, moved off the pier at 4.5) were first left without `rest`, standing
+  at the wall foot. Superseded by phase 4: they now sit on the coping in their own clips
+  (`sit-wall-laugh`, `sit-wall-talk`) via `onWall()` and `layout.wall.copingTop`; the planned single
+  `sit-chair` clip was never downloaded.
 - Greeting suppression needed no `seated` option in `use-character-motion.ts`: `greet` in
   `character.tsx` is false while resting, and it feeds both the bow and the procedural hop.
 - A parallel session moved Doraemon onto the Mixamo rig (stride 0.51) mid-work; kept.
-- Verified: `bun run test` 75/75 (walk-route invariants included), `tsc` clean, biome clean on
-  touched files.
+- Verified at the time: `bun run test` 75/75 (walk-route invariants included), `tsc` clean, biome
+  clean on touched files.
 
 ## Success Criteria
 - [x] New order and spots in `characters.ts`; all tests green, walk-route tests included.
-- [x] Gian and Suneo seated on the coping, Nobita seated at the gate, in the dev server.
+- [x] Gian and Suneo seated on the coping, Nobita seated at the gate, in the dev server (headless
+      Chromium screenshots, phase 4).
 - [x] Selecting Gian: card opens, he stays seated; selecting Shizuka: bows as before.
-- [x] Reduced motion (OS setting): seated characters still seated.
+- [ ] Reduced motion (OS setting): seated characters still seated. Not verified: the code pauses the
+      resting clip on its first frame instead of removing it, but no run with the OS setting on was made.
+      (A plan-CLI phase close had ticked this box automatically.)
 
 ## Risk Assessment
 - **Procedural breath bob and squash fight the clip.** Signal: seated characters bounce on the wall.

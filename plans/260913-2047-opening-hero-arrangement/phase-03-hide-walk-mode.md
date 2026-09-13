@@ -40,8 +40,10 @@ scene's accessible description, and verify the arrangement against `assets/home.
 - [x] No Walk button; the rest of the toolbar unchanged.
 - [x] Screenshot matches the plan table's order; Nobita seated, standing characters in `idle`
       (headless Chromium, 2026-09-13).
-- [ ] Gian and Suneo seated on the wall: waits on phase 4's clips; they stand at the wall foot now.
-- [ ] Side close-up of the wall sitters on the coping: moves to phase 4.
+- [x] Gian and Suneo seated on the wall: done in phase 4 (default-camera screenshot).
+- [x] Close-up of the wall sitters on the coping: done in phase 4, through the roster fly-to on each
+      (no body through the coping; Gian crouches on it, a property of his clip). Not a strict side
+      view, and the night preset was not checked.
 - [x] Tests, typecheck and lint pass.
 
 ## Risk Assessment

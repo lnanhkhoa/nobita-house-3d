@@ -72,6 +72,27 @@ studio lists them and `characters.test.ts` accepts them.
 - Camera fly-to on a wall sitter aimed at the sidewalk anchor and cut the head off: focus now adds
   the rest offset.
 
+## Fixes after user review (2026-09-13)
+- **Report:** Nobita's and Dekisugi's animations looked broken in the scene.
+- **Diagnosis, the merge ruled out:**
+  - Stick-figure renders of the source FBX clips match the merged GLB renders.
+  - The new downloads share one skeleton (leg 26.5, arm 28.4) that differs from the old clips' rig
+    (leg 39.2), but its full rest rotations, bone roll included, are within ~10° of Dekisugi's rig
+    everywhere except the feet (~35°). That can twist a foot; it cannot raise a knee.
+  - The poses are the clips' own content.
+- **Dekisugi:** `stand-calm` is a wall lean with one foot propped behind (the rearmost skin 2.5 cm
+  behind the origin, shoulders 2 cm in front). It read as a broken crouch in the open. Moved back
+  against the wall (user's call): z 5.94, facing square.
+- **Nobita:** `sit-ground-happy` sits cross-legged holding a foot; on his short legs the shoes
+  pass through each other. Back to the floor `sit` (user decision). `sit` leans on its hands 0.59 m
+  behind the origin, which pushed them through the gate leaf at z 6.3, so z moved to 6.4.
+- **Tighter group (user request):** Gian −1.6 → 0.2, Shizuka −0.3 → 0.95, Suneo 5.2 → 4.03,
+  Dekisugi 3.4 → 3.33.
+  - Clearances come from each resting clip's width measured over its whole loop.
+  - Dekisugi–Suneo is 0.70 m apart, under the 0.75 m previously proven; the walk-route tests pass
+    (79/79).
+  - Screenshots show no body through the posts, the pier or each other.
+
 ## Success Criteria
 - [x] Six clips merged; each GLB carries exactly one new resting clip (plus the two dances).
 - [x] Suneo seated on the coping, shins down the street face.
