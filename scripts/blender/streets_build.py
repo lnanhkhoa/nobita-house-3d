@@ -157,6 +157,9 @@ def build_markings(coll):
              0.08, 0.02, "road_mark")
 
     # Crossings: five bars spanning the carriageway, stepped along the direction of travel.
+    # `layout.streets.crossing` in src/data/scene.ts mirrors these (and the 1.2 m inset, the
+    # 0.15 m kerb margin and the 0.08 m paint top below); the walk route in
+    # src/data/walk-routes.ts crosses on them.
     bars, bar_w, pitch = 5, 0.5, 0.8
     legs = (
         ("east", "x", SIDE_X1 + KERB_R + 1.2, 1),

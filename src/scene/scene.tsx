@@ -6,6 +6,7 @@ import { Environment } from './environment';
 import { Fireflies } from './fireflies';
 import { Foliage } from './foliage';
 import { House } from './house';
+import { LawnGrass } from './lawn-grass';
 import { Lighting } from './lighting';
 import { Neighbours } from './neighbours';
 import { NightLights } from './night-lights';
@@ -25,11 +26,13 @@ export function Scene() {
       <Lighting tod={tod} />
       <NightLights tod={tod} />
       <CameraRig />
-      {/* click on empty space deselects */}
+      {/* click on empty space deselects; the end of an orbit drag is not a click */}
       <mesh
         rotation={[-Math.PI / 2, 0, 0]}
         position={[0, -0.01, 0]}
-        onClick={() => select(null)}
+        onClick={(e) => {
+          if (e.delta <= 2) select(null);
+        }}
         receiveShadow
       >
         <planeGeometry args={[400, 400]} />
@@ -37,6 +40,7 @@ export function Scene() {
       </mesh>
       <House />
       <Environment />
+      <LawnGrass />
       <Streets />
       <Neighbours />
       <Foliage />

@@ -18,7 +18,12 @@ export function InfoCard() {
     window.addEventListener('keydown', onKey);
     return () => {
       window.removeEventListener('keydown', onKey);
-      document.querySelector<HTMLButtonElement>(`.roster [data-id="${def.id}"]`)?.focus();
+      // With the menus folded away the roster is inert, so focus goes to the toggle that brings it back.
+      const rosterButton = document.querySelector<HTMLButtonElement>(`.roster [data-id="${def.id}"]`);
+      const target = rosterButton?.closest('[inert]')
+        ? document.querySelector<HTMLButtonElement>('.menus-toggle')
+        : rosterButton;
+      target?.focus();
     };
   }, [def, select]);
 

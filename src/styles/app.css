@@ -52,6 +52,33 @@ button {
   box-shadow: var(--sh-1);
 }
 
+/* Layer holding every main-page menu, so one toggle can fade them together. Same box as #ui-root,
+   so the panels inside keep their positions. */
+.menus {
+  position: absolute;
+  inset: 0;
+}
+/* Free corner on desktop: bottom-right (roster is bottom-left, toolbar top-right). */
+.menus-toggle {
+  position: absolute;
+  right: 16px;
+  bottom: 44px;
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  padding: 0;
+  color: var(--ink-700);
+  cursor: pointer;
+  transition:
+    background var(--d-hover),
+    color var(--d-hover);
+}
+.menus-toggle:hover {
+  background: var(--paper-300);
+  color: var(--ink-900);
+}
+
 /* Title card with the performance panel stacked under it. */
 .top-left {
   position: absolute;
@@ -139,6 +166,8 @@ button {
 
 .controls {
   position: absolute;
+  /* Above the info card, which comes later in the DOM: the volume popover hangs over it. */
+  z-index: 1;
   top: 16px;
   right: 16px;
   display: flex;
@@ -146,6 +175,9 @@ button {
   padding: 6px;
 }
 .controls button {
+  display: flex;
+  align-items: center;
+  gap: 6px;
   border: 0;
   background: transparent;
   padding: 8px 12px;
@@ -178,6 +210,7 @@ button {
 }
 .controls__times label {
   position: relative;
+  isolation: isolate;
   display: flex;
   align-items: center;
   padding: 8px 11px;
@@ -206,7 +239,12 @@ button {
   color: var(--accent-600);
   font-weight: 700;
 }
-.controls__times label:has(input:checked) {
+/* The checked fill is a separate element so motion can slide it between chips; it sits under the
+   text inside the label's own stacking context. */
+.controls__chip {
+  position: absolute;
+  inset: 0;
+  z-index: -1;
   background: var(--accent-soft);
 }
 /* Forced-colors overrides the accent background, so selection needs a non-colour cue. */
@@ -226,6 +264,90 @@ button {
   align-self: stretch;
   margin: 4px 4px;
   background: var(--line);
+}
+.controls svg {
+  flex-shrink: 0;
+}
+.controls__time {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+/* Items that swap between the toolbar and the phone settings sheet (see the <768px block). */
+.controls .controls__mobile-only {
+  display: none;
+}
+
+.sound {
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+.sound button {
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+  user-select: none;
+}
+/* Volume popover. It is positioned against the toolbar (the sound group is not a containing
+   block), so it lines up with the toolbar's right end: below it here, above the phone bar.
+   Inside the toolbar's own backdrop filter a second blur has nothing to sample, so it is solid. */
+.sound__popover {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  padding: 10px 14px;
+  transform-origin: top right;
+  background: var(--paper-200);
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+}
+
+/* Way through to the character studio: the toolbar's last item, styled like its buttons. */
+.controls__link {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 12px;
+  border-radius: var(--r-md);
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--accent-600);
+  text-decoration: none;
+  white-space: nowrap;
+  transition: background var(--d-hover);
+}
+.controls__link:hover {
+  background: var(--paper-300);
+}
+
+/* The settings sheet is phones-only (styled in the <768px block); hidden from 768px up even if it
+   was left open while the window widened. */
+.settings {
+  display: none;
+}
+
+.volume-slider {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 13px;
+}
+.volume-slider label {
+  font-weight: 600;
+  color: var(--ink-700);
+}
+.volume-slider input {
+  width: 140px;
+  margin: 0;
+  accent-color: var(--accent-600);
+  cursor: pointer;
+}
+.volume-slider output {
+  min-width: 4ch;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  color: var(--ink-500);
 }
 
 .roster {
@@ -271,6 +393,9 @@ button {
   top: 76px;
   width: 360px;
   max-width: calc(100vw - 32px);
+  /* Stops above the bottom-right menus toggle on short windows and scrolls instead. */
+  max-height: calc(100dvh - 76px - 96px);
+  overflow-y: auto;
   padding: 20px 22px 22px;
   box-shadow: var(--sh-2);
   animation: card-in var(--d-panel-in) var(--e-out) both;
@@ -391,35 +516,214 @@ button {
   color: var(--ink-500);
 }
 
+/* The fully labelled toolbar is ~866px wide, so below 1200px it would run into the title card
+   (measured: 31px overlap at 1100, 69px clear at 1200): time of day, Music and the studio link show
+   their icons alone, with tooltips; the names stay for screen readers. */
+@media (max-width: 1199px) {
+  .controls .controls__label {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    white-space: nowrap;
+  }
+  .controls .controls__arrow {
+    display: none;
+  }
+}
+@media (min-width: 768px) and (max-width: 1099px) {
+  .controls button,
+  .controls__link,
+  .controls__times label {
+    padding-left: 7px;
+    padding-right: 7px;
+  }
+}
+/* Narrowest desktop band: one more notch of tightening so the toolbar clears the title card. */
+@media (min-width: 768px) and (max-width: 899px) {
+  .controls button,
+  .controls__link,
+  .controls__times label {
+    padding-left: 5px;
+    padding-right: 5px;
+  }
+  .controls__divider {
+    margin-left: 2px;
+    margin-right: 2px;
+  }
+}
+
 @media (max-width: 767px) {
   .top-left {
     top: 12px;
     left: 12px;
   }
+  /* Bottom bar of 40px icon buttons that fits a phone without scrolling (so nothing hides off
+     screen and the popover isn't clipped); the rest lives in the settings sheet. */
   .controls {
     top: auto;
     bottom: 12px;
+    left: 12px;
     right: 12px;
+    justify-content: space-between;
+    gap: 2px;
+  }
+  .controls button,
+  .controls__times label {
+    justify-content: center;
+    min-width: 40px;
+    height: 40px;
+    padding: 0;
+  }
+  .controls__divider {
+    margin: 4px 1px;
+  }
+  .controls .controls__text {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    white-space: nowrap;
+  }
+  .controls .controls__desktop-only {
+    display: none;
+  }
+  .controls .controls__mobile-only {
+    display: flex;
+  }
+  .controls button[aria-expanded="true"] {
+    background: var(--paper-300);
+    color: var(--ink-900);
+  }
+  .sound__popover {
+    top: auto;
+    bottom: calc(100% + 8px);
+    transform-origin: bottom right;
+  }
+  /* The toolbar is the bottom bar here, which frees the top-right corner for the menus toggle. */
+  .menus-toggle {
+    top: 12px;
+    right: 12px;
+    bottom: auto;
   }
   .roster {
     left: 12px;
     right: 12px;
-    bottom: 64px;
+    bottom: 74px;
     overflow-x: auto;
     padding-bottom: 8px;
   }
+  /* Floats above the bottom bar (54px tall + 12px inset + 8px gap) so the bar stays usable. */
   .card {
     top: auto;
-    bottom: 0;
-    left: 0;
-    right: 0;
+    bottom: 74px;
+    left: 12px;
+    right: 12px;
     width: auto;
     max-width: none;
-    border-radius: var(--r-lg) var(--r-lg) 0 0;
-    padding-bottom: calc(22px + env(safe-area-inset-bottom));
-    max-height: 62vh;
+    max-height: min(62vh, calc(100dvh - 74px - 64px));
     overflow-y: auto;
     animation-name: sheet-in;
+  }
+
+  /* Settings sheet: same spot as the card, over it if both are open. */
+  .settings {
+    position: absolute;
+    z-index: 2;
+    left: 12px;
+    right: 12px;
+    bottom: 74px;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    padding: 6px;
+    box-shadow: var(--sh-2);
+  }
+  .settings__row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    min-height: 44px;
+    padding: 0 12px;
+    border: 0;
+    border-radius: var(--r-md);
+    background: transparent;
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--ink-700);
+    text-align: left;
+  }
+  button.settings__row {
+    cursor: pointer;
+    transition: background var(--d-hover);
+  }
+  button.settings__row:hover,
+  .settings__link:hover {
+    background: var(--paper-300);
+  }
+  .settings__row .volume-slider {
+    flex: 1;
+    font-size: 14px;
+  }
+  .settings__row .volume-slider input {
+    flex: 1;
+    width: auto;
+  }
+  .settings__link {
+    justify-content: flex-start;
+    font-weight: 600;
+    color: var(--accent-600);
+    text-decoration: none;
+  }
+  .settings__link .controls__arrow {
+    margin-left: auto;
+  }
+  .settings__switch {
+    position: relative;
+    flex-shrink: 0;
+    width: 36px;
+    height: 20px;
+    border-radius: var(--r-pill);
+    background: var(--line-strong);
+    transition: background var(--d-hover);
+  }
+  .settings__switch::after {
+    content: "";
+    position: absolute;
+    top: 2px;
+    left: 2px;
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    background: var(--paper-100);
+    box-shadow: var(--sh-1);
+    transition: transform var(--d-hover) var(--e-out);
+  }
+  [aria-checked="true"] > .settings__switch {
+    background: var(--accent-600);
+  }
+  [aria-checked="true"] > .settings__switch::after {
+    transform: translateX(16px);
+  }
+}
+/* Forced colours drop the switch's fills, so give it an outline and a solid knob. */
+@media (max-width: 767px) and (forced-colors: active) {
+  .settings__switch {
+    outline: 1px solid CanvasText;
+  }
+  .settings__switch::after {
+    background: CanvasText;
+  }
+}
+/* The narrowest phones (320px): 34px buttons keep the whole bar on screen. */
+@media (max-width: 359px) {
+  .controls button,
+  .controls__times label {
+    min-width: 34px;
+    height: 34px;
   }
 }
 @keyframes sheet-in {

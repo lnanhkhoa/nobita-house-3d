@@ -1,5 +1,6 @@
 import { Canvas } from '@react-three/fiber';
-import { useEffect } from 'react';
+import { MotionConfig, motion } from 'motion/react';
+import { useEffect, useState } from 'react';
 import { NoToneMapping, SRGBColorSpace } from 'three';
 import { config } from './config';
 import { characters } from './data/characters';
@@ -9,7 +10,7 @@ import { preflightModels } from './state/store';
 import { PerfStats, Roster, Title, ViewControls } from './ui/chrome';
 import { InfoCard } from './ui/info-card';
 import { LoadingVeil } from './ui/loading-veil';
-import { StudioLink } from './ui/studio-link';
+import { MenusToggle } from './ui/menus-toggle';
 
 const modelUrls = [
   config.models.house,
@@ -23,6 +24,8 @@ const modelUrls = [
 ];
 
 export function App() {
+  const [menusOpen, setMenusOpen] = useState(true);
+
   useEffect(() => {
     document.body.setAttribute('aria-busy', 'true');
     preflightModels(modelUrls);
@@ -43,13 +46,34 @@ export function App() {
         <PerfProbe />
       </Canvas>
       <div id="ui-root">
-        <div className="top-left">
-          <Title />
-          <PerfStats />
-          <StudioLink />
-        </div>
-        <ViewControls />
-        <Roster />
+        {/* Hidden menus stay mounted (unmounting the toolbar would stop the music): they fade out,
+            then become invisible and inert so they drop out of the tab order and hit testing. */}
+        <MotionConfig reducedMotion="user">
+          <motion.div
+            id="main-menus"
+            className="menus"
+            inert={!menusOpen}
+            initial={false}
+            animate={
+              menusOpen
+                ? { opacity: 1, visibility: 'visible' }
+                : { opacity: 0, transitionEnd: { visibility: 'hidden' } }
+            }
+            transition={{ duration: 0.2, ease: [0.22, 1, 0.36, 1] }}
+          >
+            <div className="top-left">
+              <Title />
+              <PerfStats />
+            </div>
+            <ViewControls />
+            <Roster />
+          </motion.div>
+          <MenusToggle
+            open={menusOpen}
+            onToggle={() => setMenusOpen((open) => !open)}
+            controls="main-menus"
+          />
+        </MotionConfig>
         <InfoCard />
       </div>
       <LoadingVeil />

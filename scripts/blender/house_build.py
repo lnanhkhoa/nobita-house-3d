@@ -633,6 +633,12 @@ def build_porch(coll, ground_wall):
 
     parts.append(box(coll, "porch_right_wall", (0.22, 1.75, eave_z),
                      (px_right, gf_front - 0.85, eave_z / 2), "stucco", bevel=0.025))
+    # The left side stays open for the stepping stones leading off the step (env_build.py),
+    # but without a post under the head's front-left corner the porch reads as missing a
+    # corner. 0.18 deep so it stands clear of the first stone.
+    porch_front = gf_front - 0.85 - 1.75 / 2
+    parts.append(box(coll, "porch_left_post", (0.22, 0.18, eave_z),
+                     (px_left, porch_front + 0.09, eave_z / 2), "stucco", bevel=0.025))
     parts.append(box(coll, "porch_head", (eave_right - eave_left, 1.95, 0.28),
                      (px_mid, gf_front - 0.85, eave_z - 0.14), "stucco", bevel=0.02))
     parts.append(box(coll, "porch_step", (2.30, 1.30, 0.16),

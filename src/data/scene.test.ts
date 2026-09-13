@@ -1,15 +1,18 @@
 import { describe, expect, it } from 'vitest';
+import { config } from '../config';
 import {
   allLots,
   houseTransform,
   houseVariants,
+  inSandlotBare,
   layout,
   type NeighbourLot,
   onSidewalk,
   type Rect,
+  sandlotProps,
 } from './scene';
 
-const { houseBounds: house, canopyRatio, lot, wall, road, streets, parking } = layout;
+const { houseBounds: house, canopyRatio, lot, wall, road, streets, sandlot } = layout;
 
 /** Shortest horizontal distance from a point to a rectangle; 0 when inside it. */
 function distanceToRect(x: number, z: number, r: Rect) {
@@ -55,8 +58,10 @@ function hostLot(x: number, z: number) {
     };
   }
   const n = layout.neighbours.find((c) => inside(x, z, c.lot));
-  if (!n) return undefined;
-  return { lot: n.lot, footprint: houseTransform(n as NeighbourLot).bounds };
+  if (n) return { lot: n.lot, footprint: houseTransform(n as NeighbourLot).bounds };
+  // The sandlot has no house: its canopies have to clear the pipe stack instead.
+  if (inside(x, z, layout.sandlot.lot)) return { lot: layout.sandlot.lot, footprint: sandlotProps().pipes };
+  return undefined;
 }
 
 describe('block layout', () => {
@@ -95,10 +100,61 @@ describe('block layout', () => {
     }
   });
 
-  it('leaves the parking lot opposite the gate free of buildings', () => {
-    expect(inside(wall.gateX, parking.lot.z0 + 1, parking.lot)).toBe(true);
+  it('puts the sandlot across the road from the gate and keeps the default camera out of every house', () => {
+    expect(inside(wall.gateX, road.startZ + road.depth + 3, sandlot.lot)).toBe(true);
+    const [cx, , cz] = config.camera.position;
     for (const n of layout.neighbours as readonly NeighbourLot[]) {
-      expect(overlaps(houseTransform(n).bounds, parking.lot)).toBe(false);
+      // Eaves plus the collider margin: the camera must not start inside a collider box, or
+      // the first frame already has it shoved out of place.
+      expect(distanceToRect(cx, cz, houseTransform(n).bounds)).toBeGreaterThan(0.7);
+    }
+  });
+
+  it('opens the sandlot onto the front sidewalk and fences it along the side road', () => {
+    const r = sandlot.lot;
+    const mid = (edge: string) =>
+      edge === '-z'
+        ? ([(r.x0 + r.x1) / 2, r.z0 - 0.5] as const)
+        : edge === '+z'
+          ? ([(r.x0 + r.x1) / 2, r.z1 + 0.5] as const)
+          : edge === '-x'
+            ? ([r.x0 - 0.5, (r.z0 + r.z1) / 2] as const)
+            : ([r.x1 + 0.5, (r.z0 + r.z1) / 2] as const);
+    expect(onSidewalk(...mid(sandlot.open))).toBe(true);
+    expect(onSidewalk(...mid(sandlot.fence))).toBe(true);
+    expect(sandlot.open).not.toBe(sandlot.fence);
+  });
+
+  it('keeps the sandlot props inside its walls, apart, and on the grass', () => {
+    const props = Object.entries(sandlotProps());
+    for (const [name, p] of props) {
+      // Half a metre inside the wall line, so the GLB's walls, fence and the neighbour's wall
+      // never cut through a pipe or a bamboo pole.
+      expect(p.x0, name).toBeGreaterThan(sandlot.lot.x0 + 0.5);
+      expect(p.x1, name).toBeLessThan(sandlot.lot.x1 - 0.5);
+      expect(p.z0, name).toBeGreaterThan(sandlot.lot.z0 + 0.5);
+      expect(p.z1, name).toBeLessThan(sandlot.lot.z1 - 0.5);
+      // The worn patches are where the game is played; nothing stands on them.
+      const corners: [number, number][] = [
+        [p.x0, p.z0],
+        [p.x1, p.z0],
+        [p.x0, p.z1],
+        [p.x1, p.z1],
+      ];
+      for (const [x, z] of corners) {
+        expect(inSandlotBare(x, z), `${name} corner ${x},${z} on bare earth`).toBe(false);
+      }
+    }
+    for (const [i, [, a]] of props.entries()) {
+      for (const [, b] of props.slice(i + 1)) expect(overlaps(a, b)).toBe(false);
+    }
+    for (const { centre, rx, rz } of sandlot.bare) {
+      // The edge wobble never exceeds +20%, so this keeps every patch off the walls.
+      expect(centre[0] - rx * 1.2).toBeGreaterThan(sandlot.lot.x0);
+      expect(centre[0] + rx * 1.2).toBeLessThan(sandlot.lot.x1);
+      expect(centre[1] - rz * 1.2).toBeGreaterThan(sandlot.lot.z0);
+      expect(centre[1] + rz * 1.2).toBeLessThan(sandlot.lot.z1);
+      expect(inSandlotBare(centre[0], centre[1])).toBe(true);
     }
   });
 

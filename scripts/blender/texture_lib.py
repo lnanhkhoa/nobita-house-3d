@@ -27,7 +27,10 @@ TILES = {
     "paving": ("tile-concrete", 1.8, 0.6), "stone": ("tile-concrete", 1.8, 0.5),
     "pole_concrete": ("tile-concrete", 1.8, 0.6),
     "asphalt": ("tile-asphalt", 3.0, 0.7),
-    "grass": ("tile-grass", 2.5, 0.35), "grass_dark": ("tile-grass", 2.5, 0.35),
+    "dirt": ("tile-concrete", 2.6, 0.45),
+    "board": ("tile-wood", 1.2, 0.6),
+    # Half a lot per repeat: the tile's soft drifts would visibly repeat at a shorter span.
+    "grass": ("tile-grass", 7.5, 0.2),
     "wood": ("tile-wood", 1.2, 0.7), "shed_wall": ("tile-wood", 1.2, 0.7),
 }
 

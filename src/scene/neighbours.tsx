@@ -1,7 +1,14 @@
 import { useLayoutEffect, useMemo, useRef } from 'react';
-import { BufferAttribute, BufferGeometry, type Group } from 'three';
+import { BufferAttribute, BufferGeometry, DoubleSide, type Group } from 'three';
 import { config } from '../config';
-import { houseTransform, houseVariants, layout, type NeighbourLot, type Rect } from '../data/scene';
+import {
+  houseTransform,
+  houseVariants,
+  layout,
+  type NeighbourLot,
+  SANDLOT_EDGES,
+  sandlotEdge,
+} from '../data/scene';
 import { useAppStore } from '../state/store';
 import { ModelOrProxy } from './model-or-proxy';
 
@@ -9,8 +16,9 @@ const YARD = '#8FA86A';
 const CONCRETE = '#C9C2B6';
 const COPING = '#ADA79C';
 const GATE = '#8E9AA6';
-const ASPHALT = '#54565C';
-const BAY_LINE = '#E6E4DC';
+const DIRT = '#B08D66';
+const BOARD = '#C9A55C';
+const BAMBOO = '#CDB36A';
 
 const WALL_H = 1.4;
 const WALL_T = 0.2;
@@ -201,29 +209,102 @@ function NeighbourProxy({ n }: { n: NeighbourLot }) {
   );
 }
 
-/** Coin parking across the road from the gate: asphalt, painted bays and wheel stops. */
-function ParkingProxy({ r, bays }: { r: Rect; bays: number }) {
-  const width = r.x1 - r.x0;
-  const depth = r.z1 - r.z0;
-  const pitch = width / bays;
+/**
+ * The vacant lot: grass worn bare in the middle, block walls and a board fence on the closed
+ * edges, open to the sidewalk, the three concrete pipes, the ring pyramid and the bamboo
+ * bundle. The bare patches are plain ellipses here; the GLB cuts their wobbled edge.
+ */
+function SandlotProxy() {
+  const { lot: r, bare, pipes, rings, poles, fenceHeight } = layout.sandlot;
+  const edges = SANDLOT_EDGES.map((edge) => {
+    const alongX = edge === '-z' || edge === '+z';
+    const at = edge === '-x' ? r.x0 : edge === '+x' ? r.x1 : edge === '-z' ? r.z0 : r.z1;
+    const kind = sandlotEdge(edge);
+    const h = kind === 'fence' ? fenceHeight : WALL_H;
+    const t = kind === 'fence' ? 0.04 : WALL_T;
+    return {
+      edge,
+      kind,
+      position: alongX
+        ? ([(r.x0 + r.x1) / 2, h / 2, at] as const)
+        : ([at, h / 2, (r.z0 + r.z1) / 2] as const),
+      size: alongX ? ([r.x1 - r.x0 + t, h, t] as const) : ([t, h, r.z1 - r.z0 + t] as const),
+    };
+  });
+  const gap = 0.03;
+  const stack: [number, number][] = [
+    [pipes.radius, -pipes.radius - gap],
+    [pipes.radius, pipes.radius + gap],
+    [pipes.radius + Math.sqrt(3) * (pipes.radius + gap), 0],
+  ];
+  const ringRow = rings.radius * 2 + 0.02;
+  const ringRise = Math.sqrt(3) * (rings.radius + 0.01);
+  const pyramid: [number, number][] = [
+    [-ringRow, rings.radius],
+    [0, rings.radius],
+    [ringRow, rings.radius],
+    [-ringRow / 2, rings.radius + ringRise],
+    [ringRow / 2, rings.radius + ringRise],
+    [0, rings.radius + 2 * ringRise],
+  ];
   return (
-    <group name="parking-proxy">
-      <mesh receiveShadow position={[(r.x0 + r.x1) / 2, 0.03, (r.z0 + r.z1) / 2]}>
-        <boxGeometry args={[width, 0.06, depth]} />
-        <meshStandardMaterial color={ASPHALT} />
+    <group name="sandlot-proxy">
+      <mesh
+        receiveShadow
+        rotation={[-Math.PI / 2, 0, 0]}
+        position={[(r.x0 + r.x1) / 2, 0.005, (r.z0 + r.z1) / 2]}
+      >
+        <planeGeometry args={[r.x1 - r.x0, r.z1 - r.z0]} />
+        <meshStandardMaterial color={YARD} />
       </mesh>
-      {Array.from({ length: bays + 1 }, (_, i) => r.x0 + i * pitch).map((x) => (
-        <mesh key={x} position={[x, 0.065, r.z0 + depth * 0.35]}>
-          <boxGeometry args={[0.12, 0.01, depth * 0.5]} />
-          <meshStandardMaterial color={BAY_LINE} />
+      {bare.map(({ centre, rx, rz }) => (
+        <mesh
+          key={centre[0]}
+          receiveShadow
+          rotation={[-Math.PI / 2, 0, 0]}
+          position={[centre[0], 0.012, centre[1]]}
+          scale={[rx, rz, 1]}
+        >
+          <circleGeometry args={[1, 32]} />
+          <meshStandardMaterial color={DIRT} />
         </mesh>
       ))}
-      {Array.from({ length: bays }, (_, i) => r.x0 + (i + 0.5) * pitch).map((x) => (
-        <mesh key={x} castShadow position={[x, 0.11, r.z0 + depth * 0.1]}>
-          <boxGeometry args={[pitch * 0.55, 0.16, 0.18]} />
-          <meshStandardMaterial color={CONCRETE} />
+      {edges.map(
+        (e) =>
+          e.kind !== 'open' && (
+            <mesh key={e.edge} castShadow receiveShadow position={e.position}>
+              <boxGeometry args={e.size} />
+              <meshStandardMaterial color={e.kind === 'fence' ? BOARD : CONCRETE} />
+            </mesh>
+          ),
+      )}
+      {stack.map(([y, dz]) => (
+        <mesh
+          key={dz + y}
+          castShadow
+          receiveShadow
+          position={[pipes.centre[0], y, pipes.centre[1] + dz]}
+          rotation={[0, 0, Math.PI / 2]}
+        >
+          <cylinderGeometry args={[pipes.radius, pipes.radius, pipes.length, 16, 1, true]} />
+          <meshStandardMaterial color={CONCRETE} side={DoubleSide} />
         </mesh>
       ))}
+      {pyramid.map(([dx, y]) => (
+        <mesh
+          key={dx + y}
+          castShadow
+          position={[rings.centre[0] + dx, y, rings.centre[1]]}
+          rotation={[Math.PI / 2, 0, 0]}
+        >
+          <cylinderGeometry args={[rings.radius, rings.radius, rings.length, 12, 1, true]} />
+          <meshStandardMaterial color={CONCRETE} side={DoubleSide} />
+        </mesh>
+      ))}
+      <mesh castShadow position={[poles.centre[0], poles.radius, poles.centre[1]]}>
+        <boxGeometry args={[poles.radius * 2, poles.radius * 2, poles.length]} />
+        <meshStandardMaterial color={BAMBOO} />
+      </mesh>
     </group>
   );
 }
@@ -272,12 +353,12 @@ function NeighboursProxy() {
       {neighbours.map((n) => (
         <NeighbourProxy key={n.id} n={n} />
       ))}
-      <ParkingProxy r={layout.parking.lot} bays={layout.parking.bays} />
+      <SandlotProxy />
     </group>
   );
 }
 
-/** The seven neighbour lots and the coin parking lot opposite the gate. */
+/** The neighbour lots and the sandlot straight across the road from Nobita's gate. */
 export function Neighbours() {
   return (
     <>

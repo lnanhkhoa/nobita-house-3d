@@ -305,27 +305,53 @@ def build_hedge(coll, seed=5, height=0.8):
 
 
 def build_sakura(coll, seed=8, height=3.8):
+    """A tall, heaped crown of blossom, after the Doraemon hanami trees: a thick trunk forking
+    into limbs that fan out under a broad lower tier, with a second tier piled on top.
+
+    The crown's reach is capped by `canopyRatio.sakura` in src/data/scene.ts — the hero-lot
+    sakura stands 1.86 m from the house — so the canopy grows upward in tiers instead of
+    outward: a taller tree for the same radius."""
     rng = random.Random(seed)
     trunk_h = height * 0.40
-    lean = 0.28
-    trunk_pts = [(0, 0, 0), (0.05, 0, trunk_h * 0.35), (lean * 0.6, 0.02, trunk_h * 0.75),
+    lean = 0.18
+    trunk_pts = [(0, 0, 0), (0.04, 0, trunk_h * 0.35), (lean * 0.6, 0.02, trunk_h * 0.75),
                  (lean, 0.03, trunk_h + 0.3)]
-    trunk = tapered_tube(coll, "sakura_trunk", trunk_pts, [0.26, 0.17, 0.14, 0.10], "bark_dark")
+    trunk = tapered_tube(coll, "sakura_trunk", trunk_pts, [0.30, 0.20, 0.16, 0.12], "bark_dark")
     trunk.data.materials[0] = bark_material("bark_dark")
     top = Vector(trunk_pts[-2])
-    for i, (ax, ay) in enumerate(((-0.8, 0.5), (0.7, -0.4), (0.2, 0.9))):
-        end = (top.x + ax * 0.8, top.y + ay * 0.8, trunk_h + 0.55)
-        mid = (top.x + ax * 0.4, top.y + ay * 0.4, trunk_h + 0.2)
-        tapered_tube(coll, f"sakura_branch_{i}", [tuple(top), mid, end], [0.10, 0.07, 0.04],
-                     "bark_dark", 7)
-    crown_c = (lean * 0.8, 0.05, trunk_h + height * 0.26)
-    elements = canopy_elements(rng, crown_c, height * 0.19, lobe_r=height * 0.24, big_count=4,
-                               bump_count=7, bump_r=height * 0.11, flatten=0.85)
-    core = blob_mesh(coll, "sakura_canopy", elements, resolution=height * 0.024, mat_name="blossom",
-                     target_tris=7000)
-    scatter_cards(coll, "sakura_blossoms", core, count=380, size=height * 0.20,
+    crown_c = (lean * 0.8, 0.03, trunk_h + height * 0.24)
+    spread = height * 0.21
+    # Main limbs fork from the trunk top and climb out towards the crown's rim, each with a
+    # twig splitting off near its end, so the underside reads as branches holding the bloom.
+    limbs = 6
+    for i in range(limbs):
+        a = 2 * math.pi * i / limbs + rng.uniform(-0.3, 0.3)
+        # Ends stay inside the blossom mass; a limb reaching the rim pokes out of its side.
+        reach = spread * rng.uniform(0.55, 0.75)
+        end = Vector((crown_c[0] + reach * math.cos(a), crown_c[1] + reach * math.sin(a),
+                      trunk_h + height * rng.uniform(0.20, 0.26)))
+        mid = top.lerp(end, 0.45) + Vector((0, 0, height * 0.02))
+        tapered_tube(coll, f"sakura_branch_{i}", [tuple(top), tuple(mid), tuple(end)],
+                     [0.10, 0.07, 0.035], "bark_dark", 7)
+        twig_a = a + rng.choice((-1, 1)) * rng.uniform(0.4, 0.7)
+        twig_end = mid.lerp(end, 0.5) + Vector((reach * 0.45 * math.cos(twig_a),
+                                                reach * 0.45 * math.sin(twig_a), height * 0.08))
+        tapered_tube(coll, f"sakura_twig_{i}", [tuple(mid.lerp(end, 0.5)), tuple(twig_end)],
+                     [0.045, 0.02], "bark_dark", 6)
+    for obj in coll.objects:
+        if obj.name.startswith(("sakura_branch", "sakura_twig")):
+            obj.data.materials[0] = bark_material("bark_dark")
+    elements = canopy_elements(rng, crown_c, spread, lobe_r=height * 0.18, big_count=8,
+                               bump_count=32, bump_r=height * 0.08, flatten=0.7)
+    # Upper tier: a narrower heap riding on the lower one, fused by the metaball field.
+    upper_c = (crown_c[0], crown_c[1], crown_c[2] + height * 0.24)
+    elements += canopy_elements(rng, upper_c, spread * 0.6, lobe_r=height * 0.15, big_count=5,
+                                bump_count=22, bump_r=height * 0.075, flatten=0.8)
+    core = blob_mesh(coll, "sakura_canopy", elements, resolution=height * 0.022, mat_name="blossom",
+                     target_tris=9000)
+    scatter_cards(coll, "sakura_blossoms", core, count=2000, size=height * 0.14,
                   mat=card_material("blossomcard", "blossom-cluster", glow=0.45), rng=rng,
-                  tint_base=(1.0, 0.98, 0.98), tint_var=0.06)
+                  tint_base=(1.0, 0.94, 0.96), tint_var=0.08, tilt_max=0.7)
 
 
 def build_all():

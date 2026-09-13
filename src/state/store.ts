@@ -8,6 +8,8 @@ interface AppState {
   availableModels: Record<string, boolean>;
   preflightDone: boolean;
   autoRotate: boolean;
+  /** The six characters stroll round the block; off, they walk back to their spots. */
+  walkMode: boolean;
   /** Incremented to request a camera reset; camera rig subscribes. */
   resetToken: number;
   /** Boxes the orbit camera collides with, published by `Neighbours`. */
@@ -19,6 +21,7 @@ interface AppState {
   setCameraColliders: (meshes: Object3D[]) => void;
   setTimeOfDay: (id: TimeOfDayId) => void;
   toggleAutoRotate: () => void;
+  toggleWalkMode: () => void;
   resetView: () => void;
 }
 
@@ -27,6 +30,7 @@ export const useAppStore = create<AppState>((set) => ({
   availableModels: {},
   preflightDone: false,
   autoRotate: false,
+  walkMode: false,
   resetToken: 0,
   cameraColliders: [],
   timeOfDay: DEFAULT_TIME_OF_DAY,
@@ -35,6 +39,7 @@ export const useAppStore = create<AppState>((set) => ({
   setCameraColliders: (meshes) => set({ cameraColliders: meshes }),
   setTimeOfDay: (id) => set({ timeOfDay: id }),
   toggleAutoRotate: () => set((s) => ({ autoRotate: !s.autoRotate })),
+  toggleWalkMode: () => set((s) => ({ walkMode: !s.walkMode })),
   resetView: () => set((s) => ({ resetToken: s.resetToken + 1, selectedCharacterId: null })),
 }));
 
