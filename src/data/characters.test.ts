@@ -30,6 +30,20 @@ describe('character data', () => {
       expect(motion?.loop).toBe(true);
     }
   });
+  it('seats wall sitters over a front wall run, clear of the gate and the pier caps', () => {
+    const { gateX, gateWidth, frontZ, copingTop, midPierX } = layout.wall;
+    const sitters = characters.filter((c) => c.rest && c.rest.offset[1] > 1);
+    expect(sitters.map((c) => c.id)).toEqual(['jaian', 'suneo']);
+    for (const c of sitters) {
+      const offset = c.rest?.offset ?? [0, 0, 0];
+      const x = c.position[0];
+      expect(Math.abs(x - gateX), `${c.id} off the gate`).toBeGreaterThan(gateWidth / 2 + 0.3);
+      for (const pier of midPierX) expect(Math.abs(x - pier), `${c.id} off the pier`).toBeGreaterThan(0.45);
+      // The model origin sits below the coping top by the clip's seat height, and over the wall.
+      expect(c.position[1] + offset[1]).toBeLessThan(copingTop);
+      expect(Math.abs(c.position[2] + offset[2] - frontZ)).toBeLessThan(0.3);
+    }
+  });
   it('gives every character a walking stride shorter than they are tall', () => {
     for (const c of characters) {
       expect(c.stride).toBeGreaterThan(0);

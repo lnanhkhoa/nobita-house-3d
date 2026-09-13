@@ -20,12 +20,12 @@ blocks: []
 
 | Left → right | x | Where | Pose | Clip |
 |---|---|---|---|---|
-| Gian (`jaian`) | −1.6 | On the front wall coping, left of the gate | Sitting, legs over the street side | `sit-chair` (pending download) |
-| Shizuka | −0.3 | Sidewalk | Standing | none (procedural breath, as today) |
-| Nobita | 1.7 | At the gate, on the ground | Sitting | `sit` |
-| Doraemon | 2.45 | Beside Nobita | Standing | none |
-| Dekisugi | 3.4 | By the right gate pier (Suneo's spot in the image) | Standing | none |
-| Suneo | 4.6 | On the front wall coping, right of the gate | Sitting, legs over the street side | `sit` |
+| Gian (`jaian`) | −1.6 | On the front wall coping, left of the gate | Sitting, laughing | `sit-wall-laugh` |
+| Shizuka | −0.3 | Sidewalk | Standing | `stand-happy` |
+| Nobita | 1.7 | At the gate, on the ground | Sitting, knees up | `sit-ground-happy` |
+| Doraemon | 2.45 | Beside Nobita | Standing | `stand-cheerful` |
+| Dekisugi | 3.4 | By the right gate pier (Suneo's spot in the image) | Standing | `stand-calm` |
+| Suneo | 5.2 (off the pier at 4.5) | On the front wall coping, right of the gate | Sitting, talking | `sit-wall-talk` |
 
 Walk mode is **temporarily removed** from the UI (user decision, 2026-09-13): no seated-to-walking
 transition is built. The walk code and its tests stay in the repo, untouched in behaviour.

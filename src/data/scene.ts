@@ -11,7 +11,12 @@ export const layout = {
   lot: { width: 15, depth: 13, wallHeight: 1.6, wallThickness: 0.22 },
   /** Front wall runs along this z; the gate opening is centred at x = gateX. */
   /** gateX matches the house front door so the gate faces the entrance. */
-  wall: { frontZ: 5.8, gateX: 2.05, gateWidth: 1.4 },
+  /**
+   * `copingTop` is the top of the coping course on the front wall (`WALL_H` 1.6 + 0.07 m in
+   * `scripts/blender/env_build.py`), the seat for characters sitting on the wall; `midPierX` are
+   * the mid-run piers whose caps stand 9 cm proud of it.
+   */
+  wall: { frontZ: 5.8, gateX: 2.05, gateWidth: 1.4, copingTop: 1.67, midPierX: [-3.7, 4.5] },
   sidewalk: { depth: 1.9, height: 0.12 },
   /** Characters stand on the sidewalk slab, not the road surface. */
   standY: 0.12,
@@ -42,11 +47,18 @@ export const layout = {
       [33, 7.2],
       [-8.45, -22],
     ],
+    /**
+     * Zebra crossings on all four legs of the junction, `inset` past the kerb arc: `bars`
+     * stripes `barWidth` wide at `pitch` centres, stopping `margin` short of each kerb, their
+     * top face at `top`. `streets_build.py` mirrors these; `crossingRects` turns them into areas.
+     */
+    crossing: { inset: 1.2, bars: 5, barWidth: 0.5, pitch: 0.8, margin: 0.15, top: 0.08 },
   },
   /**
    * Neighbour lots, clockwise from the lot east of Nobita's. `facing` is the direction the
    * front door looks; the house sits `HOUSE_SETBACK` back from that edge of its lot.
-   * `offset` shifts it along the street so the row does not read as stamped.
+   * `offset` shifts it along the street so the row does not read as stamped, and `mirror`
+   * swaps its door and step to the other side for the same reason.
    * `scripts/blender/neighbours_build.py` copies this table.
    */
   neighbours: [
@@ -57,7 +69,8 @@ export const layout = {
       variant: 'gable2',
       offset: 0.6,
       wall: '#F2EEE6',
-      roof: '#4A3A2E',
+      roof: '#7A4A34',
+      mirror: false,
     },
     {
       id: 'east-back',
@@ -66,7 +79,8 @@ export const layout = {
       variant: 'gable1',
       offset: -0.5,
       wall: '#E4E2DC',
-      roof: '#4F5B70',
+      roof: '#4A5060',
+      mirror: true,
     },
     {
       id: 'back',
@@ -75,7 +89,8 @@ export const layout = {
       variant: 'hip2',
       offset: 0.4,
       wall: '#EFE3C6',
-      roof: '#5E6B82',
+      roof: '#3E4C66',
+      mirror: false,
     },
     {
       id: 'west-back',
@@ -84,7 +99,8 @@ export const layout = {
       variant: 'hip2',
       offset: -0.7,
       wall: '#E6E4E0',
-      roof: '#5A4636',
+      roof: '#4B5058',
+      mirror: true,
     },
     {
       id: 'west',
@@ -93,16 +109,18 @@ export const layout = {
       variant: 'gable2',
       offset: 0.5,
       wall: '#F0DCCF',
-      roof: '#4F5B70',
+      roof: '#3E4C66',
+      mirror: false,
     },
     {
-      id: 'south-west',
+      id: 'south',
       lot: { x0: -31.3, x1: -17.3, z0: 15.6, z1: 28.6 },
       facing: '-z',
       variant: 'gable1',
-      offset: 0.8,
-      wall: '#EFE3C6',
-      roof: '#4A3A2E',
+      offset: -0.4,
+      wall: '#EDE7DA',
+      roof: '#7A4A34',
+      mirror: false,
     },
     {
       id: 'south-east',
@@ -111,14 +129,37 @@ export const layout = {
       variant: 'hip2',
       offset: -0.6,
       wall: '#F4F1EA',
-      roof: '#5E6B82',
+      roof: '#4A5060',
+      mirror: true,
     },
   ],
   /**
-   * The plot straight across the road from the gate is a coin parking lot, not a house: the
-   * default camera at (0, 4.5, 20) stands inside it and a building there would hide the hero.
+   * The vacant lot straight across the front road from Nobita's gate — the manga's 空き地
+   * where the gang plays baseball. Drawn after the reference: open to the front-road sidewalk,
+   * grass worn to bare earth in the middle, the three big concrete pipes against the back
+   * wall, a pyramid of small rings and a bundle of bamboo by the east wall, a board fence
+   * along the side road and block walls on the other two sides. It carries no house.
+   * `scripts/blender/neighbours_build.py` copies these numbers.
    */
-  parking: { lot: { x0: -7.5, x1: 9, z0: 15.6, z1: 28.6 }, bays: 5 },
+  sandlot: {
+    lot: { x0: -7.5, x1: 9, z0: 15.6, z1: 28.6 },
+    /** The edge with no wall at all: the lot opens straight onto the sidewalk there. */
+    open: '-z' as const,
+    /** The edge closed by the board fence; the remaining two get block walls. */
+    fence: '-x' as const,
+    /** Bare-earth patches, ellipses whose edge `inSandlotBare` wobbles so they read worn. */
+    bare: [
+      { centre: [0.4, 21.6] as const, rx: 4.6, rz: 3.4 },
+      { centre: [-3.85, 18.8] as const, rx: 1.5, rz: 1.0 },
+    ],
+    /** Two pipes on the ground and one nested on top, lying along x. */
+    pipes: { centre: [-0.3, 26.6] as const, radius: 0.6, length: 3.2 },
+    /** Six small rings stacked 3-2-1 with their mouths to the street. */
+    rings: { centre: [7.0, 18.0] as const, radius: 0.28, length: 0.5 },
+    /** Bundle of bamboo poles lying along z, tied twice. */
+    poles: { centre: [8.05, 22.0] as const, radius: 0.18, length: 3.6 },
+    fenceHeight: 1.45,
+  },
   /**
    * Bounding box of `house.glb`, porch included. It is the planting keep-out: a tree whose
    * canopy would reach inside grows through the roof.
@@ -129,7 +170,7 @@ export const layout = {
    * to. Measured from the exported GLBs and inflated by the +8% scale jitter `Foliage`
    * applies per instance, so it is the worst case for any one tree.
    */
-  canopyRatio: { tree: 0.55, sakura: 0.5 },
+  canopyRatio: { tree: 0.55, sakura: 0.45 },
   /**
    * Every tree in the block. The first four are Nobita's yard; every neighbour lot carries
    * planting of its own, so no yard reads bare from any orbit. `height` drives the scale
@@ -139,29 +180,33 @@ export const layout = {
    * this table's length is a draw-call cost only.
    */
   trees: [
-    { position: [-6.7, 0, 3.0] as const, height: 3.3, radius: 1.3, kind: 'sakura' as const },
+    { position: [-6.7, 0, 3.0] as const, height: 4.1, radius: 1.3, kind: 'sakura' as const },
     { position: [6.8, 0, 3.5] as const, height: 2.8, radius: 1.1, kind: 'tree' as const },
     { position: [-6.8, 0, -2.0] as const, height: 3.2, radius: 1.3, kind: 'tree' as const },
     { position: [6.7, 0, -6.5] as const, height: 4.8, radius: 1.9, kind: 'tree' as const },
     { position: [9.3, 0, -5.3] as const, height: 4.6, radius: 1.8, kind: 'tree' as const },
     { position: [20.7, 0, 4.3] as const, height: 3.4, radius: 1.3, kind: 'tree' as const },
-    { position: [9.5, 0, 4.3] as const, height: 3.0, radius: 1.2, kind: 'sakura' as const },
+    { position: [9.5, 0, 4.3] as const, height: 4.2, radius: 1.2, kind: 'sakura' as const },
     { position: [20.4, 0, -9.9] as const, height: 4.0, radius: 1.6, kind: 'tree' as const },
     { position: [20.4, 0, -19.6] as const, height: 4.0, radius: 1.6, kind: 'tree' as const },
     { position: [9.8, 0, -9.7] as const, height: 3.0, radius: 1.2, kind: 'tree' as const },
     { position: [-5.8, 0, -9.8] as const, height: 5.0, radius: 2.0, kind: 'tree' as const },
-    { position: [5.9, 0, -9.6] as const, height: 4.4, radius: 1.7, kind: 'sakura' as const },
+    { position: [5.9, 0, -9.6] as const, height: 5.4, radius: 1.7, kind: 'sakura' as const },
     { position: [-5.8, 0, -19.6] as const, height: 4.0, radius: 1.6, kind: 'tree' as const },
     { position: [5.9, 0, -19.6] as const, height: 3.4, radius: 1.4, kind: 'tree' as const },
     { position: [-29.5, 0, -19.0] as const, height: 4.2, radius: 1.7, kind: 'tree' as const },
     { position: [-29.5, 0, -11.2] as const, height: 3.8, radius: 1.5, kind: 'tree' as const },
-    { position: [-24.5, 0, -9.5] as const, height: 3.0, radius: 1.2, kind: 'sakura' as const },
+    { position: [-24.5, 0, -9.5] as const, height: 4.0, radius: 1.2, kind: 'sakura' as const },
+    { position: [-18.4, 0, -20.1] as const, height: 3.8, radius: 1.5, kind: 'tree' as const },
+    { position: [-18.4, 0, -9.2] as const, height: 4.2, radius: 1.2, kind: 'sakura' as const },
     { position: [-29.5, 0, 4.4] as const, height: 4.8, radius: 1.9, kind: 'tree' as const },
     { position: [-29.5, 0, -4.0] as const, height: 4.4, radius: 1.8, kind: 'tree' as const },
     { position: [-18.8, 0, 4.7] as const, height: 3.2, radius: 1.3, kind: 'tree' as const },
-    { position: [-29.7, 0, 17.2] as const, height: 4.2, radius: 1.7, kind: 'tree' as const },
-    { position: [-29.7, 0, 27.0] as const, height: 4.2, radius: 1.7, kind: 'tree' as const },
-    { position: [-19.4, 0, 27.2] as const, height: 3.2, radius: 1.3, kind: 'sakura' as const },
+    { position: [6.75, 0, 26.6] as const, height: 5.2, radius: 2.0, kind: 'tree' as const },
+    { position: [-5.25, 0, 26.6] as const, height: 4.2, radius: 1.7, kind: 'tree' as const },
+    { position: [-30.0, 0, 27.2] as const, height: 3.8, radius: 1.5, kind: 'tree' as const },
+    { position: [-18.5, 0, 27.2] as const, height: 3.6, radius: 1.4, kind: 'tree' as const },
+    { position: [-18.5, 0, 17.4] as const, height: 4.2, radius: 1.2, kind: 'sakura' as const },
     { position: [21.6, 0, 27.0] as const, height: 4.4, radius: 1.7, kind: 'tree' as const },
     { position: [10.7, 0, 27.0] as const, height: 3.6, radius: 1.4, kind: 'tree' as const },
     { position: [21.6, 0, 17.4] as const, height: 4.0, radius: 1.6, kind: 'tree' as const },
@@ -177,9 +222,13 @@ export const layout = {
     { start: [9.4, 0, 5.05] as const, count: 6, spacing: 0.75, height: 0.75, axis: 'x' as const },
     { start: [10.2, 0, 16.35] as const, count: 6, spacing: 0.75, height: 0.72, axis: 'x' as const },
     { start: [-18.05, 0, -5.9] as const, count: 5, spacing: 0.75, height: 0.72, axis: 'z' as const },
-    { start: [-30.4, 0, 16.35] as const, count: 5, spacing: 0.75, height: 0.75, axis: 'x' as const },
+    { start: [-30.5, 0, 16.35] as const, count: 3, spacing: 0.75, height: 0.75, axis: 'x' as const },
     { start: [-6.6, 0, -20.45] as const, count: 4, spacing: 0.75, height: 0.75, axis: 'x' as const },
     { start: [9.9, 0, -20.45] as const, count: 5, spacing: 0.75, height: 0.72, axis: 'x' as const },
+    { start: [3.05, 0, 27.7] as const, count: 2, spacing: 0.75, height: 0.7, axis: 'x' as const },
+    { start: [-6.45, 0, 24.2] as const, count: 1, spacing: 0.75, height: 0.75, axis: 'z' as const },
+    { start: [-6.3, 0, 17.2] as const, count: 1, spacing: 0.75, height: 0.7, axis: 'z' as const },
+    { start: [8.05, 0, 16.9] as const, count: 1, spacing: 0.75, height: 0.72, axis: 'z' as const },
   ],
 } as const;
 
@@ -202,6 +251,8 @@ export interface NeighbourLot {
   offset: number;
   wall: string;
   roof: string;
+  /** Door on the house's left rather than its right, seen from the street. */
+  mirror: boolean;
 }
 
 /** Distance from the facing lot edge to the front wall of the house standing on it. */
@@ -308,14 +359,74 @@ export function inHeroLot(x: number, z: number): boolean {
 }
 
 /**
- * `allLots` and `onSidewalk` below have no runtime caller: they exist so `scene.test.ts` can
+ * Ground footprints of what stands on the sandlot, in world x/z: the pipe stack (two pipes
+ * side by side, so twice the diameter across), the ring pyramid (three rings along x) and the
+ * bamboo bundle (along z). The lawn, the planting test and the layout test all read these.
+ */
+export function sandlotProps(): { pipes: Rect; rings: Rect; poles: Rect } {
+  const { pipes, rings, poles } = layout.sandlot;
+  return {
+    pipes: {
+      x0: pipes.centre[0] - pipes.length / 2,
+      x1: pipes.centre[0] + pipes.length / 2,
+      z0: pipes.centre[1] - 2 * pipes.radius,
+      z1: pipes.centre[1] + 2 * pipes.radius,
+    },
+    rings: {
+      x0: rings.centre[0] - 3 * rings.radius,
+      x1: rings.centre[0] + 3 * rings.radius,
+      z0: rings.centre[1] - rings.length / 2,
+      z1: rings.centre[1] + rings.length / 2,
+    },
+    poles: {
+      x0: poles.centre[0] - poles.radius,
+      x1: poles.centre[0] + poles.radius,
+      z0: poles.centre[1] - poles.length / 2,
+      z1: poles.centre[1] + poles.length / 2,
+    },
+  };
+}
+
+/**
+ * Edge of a bare patch as a multiple of its radius at polar angle `theta`: three low
+ * harmonics so it reads as trodden ground, not a drawn ellipse. `neighbours_build.py` cuts
+ * the dirt with the same function so the lawn stops exactly where the earth begins.
+ */
+export function bareEdge(theta: number): number {
+  return (
+    1 + 0.1 * Math.sin(3 * theta + 0.7) + 0.06 * Math.sin(5 * theta - 1.9) + 0.04 * Math.sin(2 * theta + 2.5)
+  );
+}
+
+/** True where the sandlot's grass has worn through to earth. */
+export function inSandlotBare(x: number, z: number): boolean {
+  for (const { centre, rx, rz } of layout.sandlot.bare) {
+    const u = (x - centre[0]) / rx;
+    const v = (z - centre[1]) / rz;
+    if (Math.hypot(u, v) < bareEdge(Math.atan2(v, u))) return true;
+  }
+  return false;
+}
+
+export type SandlotEdge = '-x' | '+x' | '-z' | '+z';
+export const SANDLOT_EDGES: readonly SandlotEdge[] = ['-x', '+x', '-z', '+z'];
+
+/** What closes an edge of the sandlot: nothing, the board fence, or a block wall. */
+export function sandlotEdge(edge: SandlotEdge): 'open' | 'fence' | 'wall' {
+  const { open, fence } = layout.sandlot;
+  return edge === open ? 'open' : edge === fence ? 'fence' : 'wall';
+}
+
+/**
+ * `onSidewalk` below has no runtime caller, and `allLots` only the camera's check that a
+ * followed walker is not being watched through a lot wall: they exist so `scene.test.ts` can
  * state the layout invariants — every lot disjoint from every road, every pole on pavement —
  * against the same numbers the scene is built from, instead of against a copy.
  */
 
-/** Every lot in the block that a tree may stand on, Nobita's included. */
+/** Every lot in the block, Nobita's included. */
 export function allLots(): Rect[] {
-  return [heroLot, ...layout.neighbours.map((n) => n.lot), layout.parking.lot];
+  return [heroLot, ...layout.neighbours.map((n) => n.lot), layout.sandlot.lot];
 }
 
 /** True when (x, z) is on one of the four sidewalk strips, junction corners included. */
@@ -332,4 +443,31 @@ export function onSidewalk(x: number, z: number): boolean {
   const acrossFrontRoad = z > road.startZ && z < road.startZ + road.depth;
   if ((nearFront || farFront) && !acrossSideRoad) return true;
   return (nearSide || farSide) && !acrossFrontRoad;
+}
+
+export type CrossingLeg = 'east' | 'west' | 'south' | 'north';
+
+/**
+ * The painted area of each zebra crossing, named by the junction leg it sits on: `east` and
+ * `west` cross the front road, `south` and `north` the side road. The bars step away from the
+ * junction, so a crossing starts `inset` past the kerb arc and runs outward.
+ */
+export function crossingRects(): Record<CrossingLeg, Rect> {
+  const { road, streets } = layout;
+  const { inset, bars, barWidth, pitch, margin } = streets.crossing;
+  const span = (bars - 1) * pitch + barWidth;
+  const roadEnd = road.startZ + road.depth;
+  const east = streets.side.endX + streets.kerbRadius + inset;
+  const west = streets.side.startX - streets.kerbRadius - inset;
+  const south = roadEnd + streets.kerbRadius + inset;
+  const north = road.startZ - streets.kerbRadius - inset;
+  const acrossFront = { z0: road.startZ + margin, z1: roadEnd - margin };
+  const acrossSide = { x0: streets.side.startX + margin, x1: streets.side.endX - margin };
+  return {
+    east: { x0: east, x1: east + span, ...acrossFront },
+    // Stepping outward from `west` means the bars run toward -x, each one `barWidth` wide.
+    west: { x0: west + barWidth - span, x1: west + barWidth, ...acrossFront },
+    south: { ...acrossSide, z0: south, z1: south + span },
+    north: { ...acrossSide, z0: north + barWidth - span, z1: north + barWidth },
+  };
 }

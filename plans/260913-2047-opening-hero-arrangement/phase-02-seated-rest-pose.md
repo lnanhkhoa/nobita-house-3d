@@ -97,10 +97,10 @@ effect returns early when `seated`. `useCharacterMotion` gains `seated`: no gree
   touched files.
 
 ## Success Criteria
-- [ ] New order and spots in `characters.ts`; all tests green, walk-route tests included.
-- [ ] Gian and Suneo seated on the coping, Nobita seated at the gate, in the dev server.
-- [ ] Selecting Gian: card opens, he stays seated; selecting Shizuka: bows as before.
-- [ ] Reduced motion (OS setting): seated characters still seated.
+- [x] New order and spots in `characters.ts`; all tests green, walk-route tests included.
+- [x] Gian and Suneo seated on the coping, Nobita seated at the gate, in the dev server.
+- [x] Selecting Gian: card opens, he stays seated; selecting Shizuka: bows as before.
+- [x] Reduced motion (OS setting): seated characters still seated.
 
 ## Risk Assessment
 - **Procedural breath bob and squash fight the clip.** Signal: seated characters bounce on the wall.

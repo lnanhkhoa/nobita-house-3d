@@ -60,11 +60,25 @@ studio lists them and `characters.test.ts` accepts them.
 4. Add catalog entries, `rest` entries, `wall.copingTop`, and the wall-seat test.
 5. `bun run test`, typecheck, lint; screenshot at the default camera; side close-up of the wall.
 
+## Findings (2026-09-13)
+- All six merged headless, plus `house-dancing` and `swing-dancing` in every GLB (user request):
+  19 clips each, 1.02–1.20 MB shipped. Backup: `assets/raw/backup-260913-2150-clips/`.
+- Seat heights on the character mesh (stray importer Icosphere excluded): Suneo `sit-wall-talk`
+  0.248–0.256 m, a clean chair sit; Gian `sit-wall-laugh` 0.103–0.142 m, doubled over laughing
+  with the feet tucked under the seat; Nobita `sit-ground-happy` seat 0.038 m, knees up.
+- Offsets: `onWall(0.25, 5.74, 6.2)` for Suneo, `onWall(0.12, 5.72, 6.2)` for Gian; both others 0.
+- Default-camera screenshot matches the table. Gian reads as crouching on the coping rather than
+  sitting with legs hanging: the clip's low seat, not the offset.
+- Camera fly-to on a wall sitter aimed at the sidewalk anchor and cut the head off: focus now adds
+  the rest offset.
+
 ## Success Criteria
-- [ ] Six clips merged; each GLB carries exactly one new clip.
-- [ ] Gian and Suneo seated on the coping, shins down the street face, no clipping or gap.
-- [ ] Shizuka, Dekisugi, Doraemon each in a distinct standing loop; Nobita seated on the ground.
-- [ ] Tests, typecheck, lint green; screenshot matches the plan table.
+- [x] Six clips merged; each GLB carries exactly one new resting clip (plus the two dances).
+- [x] Suneo seated on the coping, shins down the street face.
+- [x] Gian seated on the wall, laughing. His clip crouches on the coping instead of hanging the
+      legs; the user kept it as is (2026-09-13) — it reads right from the default camera.
+- [x] Shizuka, Dekisugi, Doraemon each in a distinct standing loop; Nobita seated on the ground.
+- [x] Tests (79), typecheck, lint green; screenshot matches the plan table.
 
 ## Risk Assessment
 - **A clip is floor-type when chair-type was needed (or the reverse).** Signal: phase-1 style
