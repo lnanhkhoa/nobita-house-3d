@@ -117,9 +117,17 @@ export const motions: MotionDef[] = [
   {
     id: 'sit-ground-happy',
     label: 'Sit happy',
-    description: 'Sitting on the ground, knees up, cheerful. Nobita at the gate.',
+    description: 'Sitting cross-legged on the ground, holding a foot.',
     loop: true,
     source: 'Sitting (floor, cheerful)',
+  },
+  {
+    id: 'sitting-pose',
+    label: 'Sitting pose',
+    description:
+      'A still pose on the ground, knees up, feet forward, hands down by the feet. Nobita at the gate.',
+    loop: true,
+    source: 'Sitting Pose',
   },
   {
     id: 'stand-happy',
