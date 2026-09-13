@@ -1,12 +1,28 @@
 import { useAnimations } from '@react-three/drei';
-import { useEffect, useRef, useState } from 'react';
-import { type Group, LoopOnce, type Mesh } from 'three';
+import { useFrame } from '@react-three/fiber';
+import { useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { type AnimationAction, type AnimationClip, type Group, LoopOnce, LoopRepeat, type Mesh } from 'three';
 import { config } from '../config';
 import type { CharacterDef } from '../data/characters';
 import { useAppStore } from '../state/store';
 import { prefersReducedMotion } from '../utils/reduced-motion';
 import { type LoadedGltf, ModelOrProxy } from './model-or-proxy';
 import { useCharacterMotion } from './use-character-motion';
+import { useWalker } from './use-walker';
+import { walkClock } from './walk-clock';
+
+const NO_OFFSET: [number, number, number] = [0, 0, 0];
+
+/**
+ * The clip a character holds at home: its `rest` clip (a sit) when the GLB carries it,
+ * otherwise `idle`, otherwise none — the posed sculpts and the proxy just stand.
+ */
+function restFor(def: CharacterDef, animations: AnimationClip[]) {
+  const has = (name: string) => animations.some((clip) => clip.name === name);
+  const seated = !!def.rest && has(def.rest.clip);
+  const clip = seated && def.rest ? def.rest.clip : has('idle') ? 'idle' : null;
+  return { clip, seated };
+}
 
 /** Capsule body + sphere head, scaled to canon height, shown until the real GLB exists. */
 function CharacterProxy({ def, hovered }: { def: CharacterDef; hovered: boolean }) {
@@ -26,10 +42,36 @@ function CharacterProxy({ def, hovered }: { def: CharacterDef; hovered: boolean 
   );
 }
 
+interface ClipPresence {
+  welcome: boolean;
+  walk: boolean;
+  /** The GLB carries the character's `rest` clip, so at home it sits rather than stands. */
+  seated: boolean;
+  /** The GLB carries a clip to hold at home (`rest` or `idle`). */
+  resting: boolean;
+}
+
 /** Rodin exports arrive without shadow flags; set them once per loaded scene. */
-function LoadedCharacter({ gltf, selected }: { gltf: LoadedGltf; selected: boolean }) {
+function LoadedCharacter({
+  gltf,
+  def,
+  greet,
+  moving,
+}: {
+  gltf: LoadedGltf;
+  def: CharacterDef;
+  greet: boolean;
+  moving: boolean;
+}) {
   const group = useRef<Group>(null);
-  const { actions } = useAnimations(gltf.animations, group);
+  const { actions, mixer } = useAnimations(gltf.animations, group);
+  // Read straight off the clips during render, so the very first frame already has the pose.
+  const rest = restFor(def, gltf.animations);
+  const restClip = moving ? null : rest.clip;
+  const offset = !moving && rest.seated && def.rest ? def.rest.offset : NO_OFFSET;
+  /** The resting action currently holding the pose, for the bow to hand back to. */
+  const activeRest = useRef<AnimationAction | null>(null);
+  const firstRest = useRef(true);
 
   useEffect(() => {
     gltf.scene.traverse((node) => {
@@ -43,51 +85,142 @@ function LoadedCharacter({ gltf, selected }: { gltf: LoadedGltf; selected: boole
     });
   }, [gltf.scene]);
 
-  // The welcome bow authored in Blender plays once each time the character is selected.
+  // The resting clip loops for as long as the character is home. On load it starts at full
+  // weight: fading in from the bind pose would flash a Mixamo T-pose. Reduced motion holds its
+  // first frame rather than dropping it, since without it a sitter stands and a stander T-poses.
+  useLayoutEffect(() => {
+    const action = restClip ? actions[restClip] : undefined;
+    if (!action) return;
+    action.reset();
+    action.setLoop(LoopRepeat, Number.POSITIVE_INFINITY);
+    if (firstRest.current) action.play();
+    else action.fadeIn(0.2).play();
+    firstRest.current = false;
+    if (prefersReducedMotion()) {
+      action.time = 0;
+      action.paused = true;
+    }
+    activeRest.current = action;
+    return () => {
+      activeRest.current = null;
+      action.fadeOut(0.2);
+    };
+  }, [restClip, actions]);
+
+  // The welcome bow plays once each time the character is selected at home, crossfading out of
+  // the resting clip and, once it ends, back into it. Setting off on a walk mid-bow fades it out.
   useEffect(() => {
     const welcome = actions.welcome;
-    if (!selected || !welcome) return;
+    if (!greet || !welcome) return;
     if (prefersReducedMotion()) return;
+    const held = activeRest.current;
+    let done = false;
     welcome.reset();
     welcome.setLoop(LoopOnce, 1);
+    // With a clip to return to, hold the last frame so the crossfade back starts from it.
+    welcome.clampWhenFinished = !!held;
     welcome.play();
-    return () => {
-      welcome.fadeOut(0.15);
+    held?.crossFadeTo(welcome, 0.2, false);
+    const returnToRest = (e: { action: AnimationAction }) => {
+      if (e.action !== welcome || !held || activeRest.current !== held) return;
+      done = true;
+      held.reset().play();
+      welcome.crossFadeTo(held, 0.3, false);
     };
-  }, [selected, actions]);
+    mixer.addEventListener('finished', returnToRest);
+    return () => {
+      mixer.removeEventListener('finished', returnToRest);
+      if (done) {
+        welcome.stop();
+        return;
+      }
+      welcome.fadeOut(0.15);
+      // Cut short while still home (deselected mid-bow): bring the resting clip back.
+      if (held && activeRest.current === held) held.fadeIn(0.15);
+    };
+  }, [greet, actions, mixer]);
+
+  // The walk cycle loops for as long as the character is out walking. Reduced motion keeps
+  // it: the character is travelling either way, and frozen legs would just slide.
+  useEffect(() => {
+    const walk = actions.walk;
+    if (!moving || !walk) return;
+    walk.reset();
+    walk.setLoop(LoopRepeat, Number.POSITIVE_INFINITY);
+    walk.fadeIn(0.2).play();
+    return () => {
+      walk.fadeOut(0.2);
+    };
+  }, [moving, actions]);
+
+  // One clip cycle per stride of ground covered, so the feet stay planted at any speed.
+  useFrame(() => {
+    const walk = actions.walk;
+    if (walk) walk.timeScale = walkClock.speed / def.stride;
+  });
 
   return (
-    <group ref={group}>
-      <primitive object={gltf.scene} />
+    <group position={offset}>
+      <group ref={group}>
+        <primitive object={gltf.scene} />
+      </group>
     </group>
   );
 }
 
-/** Reports whether the loaded GLB carries the welcome clip, then renders it. */
-function WelcomeProbe({
+/** Reports which authored clips the loaded GLB carries, then renders it. */
+function ClipProbe({
   gltf,
-  selected,
-  onHasWelcome,
+  def,
+  greet,
+  moving,
+  onClips,
 }: {
   gltf: LoadedGltf;
-  selected: boolean;
-  onHasWelcome: (has: boolean) => void;
+  def: CharacterDef;
+  greet: boolean;
+  moving: boolean;
+  onClips: (clips: ClipPresence) => void;
 }) {
   useEffect(() => {
-    onHasWelcome(gltf.animations.some((clip) => clip.name === 'welcome'));
-  }, [gltf.animations, onHasWelcome]);
-  return <LoadedCharacter gltf={gltf} selected={selected} />;
+    const has = (name: string) => gltf.animations.some((clip) => clip.name === name);
+    const rest = restFor(def, gltf.animations);
+    onClips({ welcome: has('welcome'), walk: has('walk'), seated: rest.seated, resting: rest.clip !== null });
+  }, [gltf.animations, def, onClips]);
+  return <LoadedCharacter gltf={gltf} def={def} greet={greet} moving={moving} />;
 }
 
 export function Character({ def, index }: { def: CharacterDef; index: number }) {
   const select = useAppStore((s) => s.select);
   const selected = useAppStore((s) => s.selectedCharacterId === def.id);
   const [hovered, setHovered] = useState(false);
+  const walker = useRef<Group>(null);
   const motion = useRef<Group>(null);
   const url = `${config.models.characterDir}/${def.id}.glb`;
 
-  const [hasWelcome, setHasWelcome] = useState(false);
-  useCharacterMotion(motion, { height: def.height, phase: index * 1.27, selected, hovered, hasWelcome });
+  // The walker owns the outer group's transform, so it carries no position/rotation props: a
+  // re-render (hover, selection) must never snap a walking character back to its spot.
+  const moving = useWalker(walker, index, def);
+  const [clips, setClips] = useState<ClipPresence>({
+    welcome: false,
+    walk: false,
+    seated: false,
+    resting: false,
+  });
+  // A walker keeps walking when clicked: the card opens, but the greeting waits until home.
+  // A sitter never greets: the bow and the hop are standing motions that would lift it off
+  // its seat.
+  const greet = selected && !moving && !clips.seated;
+  useCharacterMotion(motion, {
+    height: def.height,
+    stride: def.stride,
+    phase: index * 1.27,
+    selected: greet,
+    hovered,
+    hasWelcome: clips.welcome,
+    hasWalkClip: clips.walk,
+    resting: !moving && clips.resting,
+  });
 
   useEffect(() => {
     if (!hovered) return;
@@ -99,9 +232,8 @@ export function Character({ def, index }: { def: CharacterDef; index: number }) 
 
   return (
     <group
+      ref={walker}
       name={`character-${def.id}`}
-      position={def.position}
-      rotation={[0, def.rotationY, 0]}
       onClick={(e) => {
         e.stopPropagation();
         select(def.id);
@@ -114,7 +246,7 @@ export function Character({ def, index }: { def: CharacterDef; index: number }) 
     >
       <group ref={motion}>
         <ModelOrProxy url={url} proxy={<CharacterProxy def={def} hovered={hovered} />}>
-          {(gltf) => <WelcomeProbe gltf={gltf} selected={selected} onHasWelcome={setHasWelcome} />}
+          {(gltf) => <ClipProbe gltf={gltf} def={def} greet={greet} moving={moving} onClips={setClips} />}
         </ModelOrProxy>
       </group>
     </group>

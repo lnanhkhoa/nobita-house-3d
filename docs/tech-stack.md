@@ -4,9 +4,9 @@ Rewritten 2026-09-10 for the exterior-diorama direction. Supersedes the 2026-08-
 
 ## Product shape
 
-Single-page web diorama: orbit Nobita's house from a corner of a Japanese suburb, six characters on the sidewalk with procedural idle motion, click a character → camera fly + info card. Exterior only, English UI, local dev only.
+Two pages. `/` is the web diorama: orbit Nobita's house from a corner of a Japanese suburb, six characters gathered round the gate after `assets/home.jpg` (standing with procedural idle motion, or holding a resting clip such as sitting), click a character → camera fly + info card. `/characters/<id>` is the character studio: one character alone on a lit turntable stage with a motion picker that plays whatever clips its GLB carries. Exterior only, English UI.
 
-The block is a crossroads: a front road along X, a side road along Z past the left wall, seven neighbour lots and a coin parking lot opposite the gate. Nobita's house stays the hero; neighbours sit one rung lower on the detail ladder and fade into the fog.
+The block is a crossroads: a front road along X, a side road along Z past the left wall, seven neighbour lots (the single-storey one on the corner diagonally across the crossroads), and straight across the road from the gate the manga's vacant lot, drawn after `assets/baseball.jpg`: open to the front-road sidewalk, grass worn to bare earth in the middle, the three concrete pipes against the back wall, a pyramid of small rings and a bamboo bundle by the east wall, a board fence along the side road. Nobita's house stays the hero; neighbours sit one rung lower on the detail ladder and fade into the fog. The default camera stands over the sandlot's open edge, looking back at the house; the orbit reaches out to 60 m so the whole block fits in frame, and its target can be dragged across the crossroads to the corner lots (`config.targetBounds`) and no further.
 
 ## Runtime
 
@@ -33,27 +33,47 @@ Gemini reference images → Hyper3D Rodin (manual, user) → Blender via MCP →
 
 ```
 src/
-  app.tsx                Canvas + UI roots; preflights model URLs (HEAD) so missing GLBs
-                         render as proxies instead of breaking Suspense
+  main.tsx               route switch; both pages are `lazy()` chunks so neither carries the
+                         other's scene
+  router.ts              `parseRoute` (pure, tested) + history helpers. `/` diorama,
+                         `/characters/<id>` studio. No router library; `vercel.json` rewrites
+                         the two studio paths to index.html
+  app.tsx                diorama page: Canvas + UI roots; preflights model URLs (HEAD) so
+                         missing GLBs render as proxies instead of breaking Suspense
   config.ts              camera limits, model paths
-  data/scene.ts          every coordinate in the block, in metres: lot, streets, the seven
-                         neighbour lots, parking, planting. `houseTransform` derives a
+  data/scene.ts          every coordinate in the block, in metres: lot, streets, the eight
+                         neighbour lots, the sandlot, planting. `houseTransform` derives a
                          neighbour house's centre, yaw, ridge height and world footprint from
                          its lot; the proxy, the camera colliders, the layout test and
                          `neighbours_build.py` all read it, so they cannot drift apart
-  data/characters.ts     ids, heights, bios, spawn positions
+  data/characters.ts     ids, heights, strides, bios, spawn positions
+  data/walk-routes.ts    walk mode's one shared loop round the crossroads (sidewalks and the
+                         four zebras from `crossingRects`): `sampleWalk(i, d)` places character
+                         i after the group has walked d metres; d ≡ 0 is the spawn layout
+  data/animations.ts     motion catalog: clip id → label, description, loop mode, Mixamo
+                         source. Display only — what a character can actually play is read
+                         from `gltf.animations`, never from this file
+  studio/                character studio page: stage, three-point light, turntable, clip
+                         player. Frames the camera from `characters.ts` height, casts a real
+                         shadow map (drei `ContactShadows` overrides materials and loses
+                         skinning, so a skinned character throws its bind-pose box)
   scene/                 house, environment, streets, neighbours, foliage, character,
                          lighting, camera-rig
   scene/environment.tsx  Nobita's lot only — yard, wall, gate
   scene/streets.tsx      every surface outside a lot wall: roads, sidewalks, kerbs, markings,
                          poles
-  scene/neighbours.tsx   the other lots, the parking lot, and the always-mounted
+  scene/neighbours.tsx   the other lots, the sandlot, and the always-mounted
                          `camera-colliders` group
   scene/model-or-proxy   GLB when it exists on the server, placeholder otherwise
-  scene/use-character-motion  procedural idle: breath bob+squash, sway, hover lift, select hop
+  scene/use-character-motion  procedural idle: breath bob+squash, sway, hover lift, select hop,
+                         and the walking gait (step bounce, waddle, lean) that takes over from it
+  scene/walk-clock.ts    the shared walk distance, speed and direction; walks home to the
+                         nearest whole lap when walk mode goes off
+  scene/use-walker.ts    drives each character's transform round the loop, writes its live pose
   scene/perf-probe.tsx   frame pacing + renderer.info sampler for the stats panel
   state/store.ts         zustand store + model preflight
   state/perf-store.ts    latest performance sample (separate store, 2 updates/s)
+  state/character-poses  live character positions, per frame, for the camera to follow
   ui/                    loading veil, info card, view controls, roster, performance stats
 scripts/
   gen-ref-images.mjs     Gemini image generation (Flash 1K, 3 views; Pro/2K behind flags)
@@ -76,17 +96,28 @@ Camera collision: `Neighbours` always renders a `camera-colliders` group of one 
 
 ## Measured performance (M4, Chrome headless over CDP, real Metal GPU, 2026-09-11)
 
-| Metric | Single lot (2026-09-10) | Whole block | Budget |
-|---|---|---|---|
-| FPS, all four azimuths | 60 | 60 | 60 |
-| Draw calls, default view | 76 | 195 | ≤ 110 |
-| Draw calls, worst azimuth | — | 237 | ≤ 110 |
-| Triangles, default view | 511k | 763k | ≤ 650k |
-| `public/models` payload | 16 MB | 7.9 MB | ≤ 18 MB |
+| Metric | Single lot (2026-09-10) | Whole block | Block + lawn grass | Budget |
+|---|---|---|---|---|
+| FPS, all four azimuths | 60 | 60 | 60 | 60 |
+| Draw calls, default view | 76 | 195 | 248 | ≤ 110 |
+| Draw calls, worst azimuth | — | 237 | 260 | ≤ 110 |
+| Triangles, default view | 511k | 763k | 1.30M | ≤ 1.5M |
+| Triangles, worst azimuth | — | — | 1.39M | ≤ 1.5M |
+| `public/models` payload | 16 MB | 7.9 MB | 7.7 MB | ≤ 18 MB |
 
-Draw calls and triangles are over budget and knowingly not acted on further; full numbers,
-per-GLB costs and the ranked options are in
-`plans/reports/perf-260911-0245-neighbourhood.md`.
+The "Block + lawn grass" column was measured after the fireflies, moon and perf panel landed,
+so its draw calls include those too. Toggling the grass alone at the default view moves
+243 → 248 calls and 818k → 1.30M triangles.
+
+**Triangle budget raised from 650k to 1.5M on 2026-09-11** (user decision) to carry the 3D
+lawn: ~228k instanced blades at 3 triangles each, 683k in all, of which the frustum culls the
+lots off screen. Blades shrink to nothing past 48 m, so the far lots cost vertex work but no
+fill. The lever if a device struggles is the grid pitch in `src/scene/lawn-placement.ts`:
+`NEIGHBOUR_SPACING` 0.065 → 0.09 roughly halves the seven neighbour lawns (~570k → ~300k
+triangles) with widened blades keeping the cover; `BLADE_SPACING` does the same for Nobita's.
+
+Draw calls are over budget and knowingly not acted on further; full numbers, per-GLB costs and
+the ranked options are in `plans/reports/perf-260911-0245-neighbourhood.md`.
 
 The cause is `Foliage`, which clones a whole GLB per instance: a tree is 4 draw calls, a shrub
 3, and the block has 34 of them — 113 of the 195 calls. The new street and house geometry is

@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { motions } from './animations';
 import { characters } from './characters';
 import { layout } from './scene';
 
@@ -20,5 +21,19 @@ describe('character data', () => {
     }
     const xs = characters.map((c) => c.position[0]);
     expect([...xs].sort((a, b) => a - b)).toEqual(xs);
+  });
+  it('rests only in looping clips the motion catalog knows', () => {
+    for (const c of characters) {
+      if (!c.rest) continue;
+      const motion = motions.find((m) => m.id === c.rest?.clip);
+      expect(motion, `${c.id} rests in ${c.rest.clip}`).toBeDefined();
+      expect(motion?.loop).toBe(true);
+    }
+  });
+  it('gives every character a walking stride shorter than they are tall', () => {
+    for (const c of characters) {
+      expect(c.stride).toBeGreaterThan(0);
+      expect(c.stride).toBeLessThan(c.height);
+    }
   });
 });

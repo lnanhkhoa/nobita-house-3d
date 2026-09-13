@@ -9,6 +9,7 @@ import { preflightModels } from './state/store';
 import { PerfStats, Roster, Title, ViewControls } from './ui/chrome';
 import { InfoCard } from './ui/info-card';
 import { LoadingVeil } from './ui/loading-veil';
+import { StudioLink } from './ui/studio-link';
 
 const modelUrls = [
   config.models.house,
@@ -36,7 +37,7 @@ export function App() {
         // Neutral tone mapping keeps Doraemon blue saturated; filmic curves mud the palette.
         gl={{ antialias: true, toneMapping: NoToneMapping, outputColorSpace: SRGBColorSpace }}
         role="img"
-        aria-label="Nobita's house from Doraemon seen from the street: a two-storey cream house with a blue-grey tile roof behind a concrete block wall, with Doraemon, Nobita, Shizuka, Gian and Suneo standing on the sidewalk."
+        aria-label="Nobita's house from Doraemon seen from the street: a two-storey cream house with a blue-grey tile roof behind a concrete block wall, with Doraemon, Nobita, Shizuka, Gian, Suneo and Dekisugi gathered round the gate, Nobita sitting on the ground in front of it."
       >
         <Scene />
         <PerfProbe />
@@ -45,6 +46,7 @@ export function App() {
         <div className="top-left">
           <Title />
           <PerfStats />
+          <StudioLink />
         </div>
         <ViewControls />
         <Roster />

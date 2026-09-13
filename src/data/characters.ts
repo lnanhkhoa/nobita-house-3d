@@ -1,5 +1,13 @@
 import { layout } from './scene';
 
+/** A looping clip a character holds at home instead of standing, and where it puts the body. */
+export interface RestPose {
+  /** Clip name inside the GLB. A GLB without it leaves the character standing on `position`. */
+  clip: string;
+  /** From `position` to the model origin while resting, metres: lifts a sitter onto a seat. */
+  offset: [number, number, number];
+}
+
 export interface CharacterDef {
   id: string;
   name: string;
@@ -8,38 +16,61 @@ export interface CharacterDef {
   jpName: string;
   /** Canon height in metres; drives proxy size and GLB normalisation in Blender. */
   height: number;
-  /** Feet position on the sidewalk, metres. Street is +Z, house is at the origin. */
+  /**
+   * One full walking stride (two steps) in metres: the ground a character covers per cycle
+   * of its `walk` clip, measured off the rigged mesh in Blender (`rig_welcome.py` prints it).
+   * These legs have no knee, so a swing covers less ground than a real stride of the same
+   * height. Sets the step rate of the procedural gait and the playback rate of the clip.
+   */
+  stride: number;
+  /**
+   * Feet position on the sidewalk, metres. Street is +Z, house is at the origin. Also the
+   * character's home on the walk loop, so it stays on the pavement even for a sitter whose
+   * `rest` pose lifts the body elsewhere.
+   */
   position: [number, number, number];
   /** Yaw in radians; 0 faces +Z (toward the default camera). */
   rotationY: number;
+  /** Held at home instead of the standing pose. */
+  rest?: RestPose;
   /** Signature colour used for the proxy body and the info-card eyebrow. */
   color: string;
   bio: string;
 }
 
-// Order = left-to-right in the hero reference image.
+// Order = left-to-right in `assets/home.jpg`, gathered round the gate (x 1.35–2.75), with
+// Dekisugi added where Suneo stands in the image and Suneo moved onto the wall (user decisions
+// 2026-09-13).
 export const characters: CharacterDef[] = [
+  {
+    id: 'jaian',
+    name: 'Takeshi "Gian" Goda',
+    shortName: 'Gian',
+    jpName: '剛田 武',
+    height: 1.57,
+    // Mixamo humanoid rig on Dekisugi's shared clips: the `walk` root travel the merge script
+    // strips on his rig (0.80 m) times his leg ratio (1.236). Estimated, like Shizuka's.
+    stride: 0.99,
+    // At the foot of the wall left of the gate, clear of the mid-run pier at x −3.7.
+    position: [-1.6, layout.standY, 6.2],
+    rotationY: 0,
+    color: '#F0801E',
+    bio: 'The neighbourhood strongman and self-appointed singer. "What’s yours is mine, what’s mine is mine" — but when it truly matters, Gian is the friend who never runs.',
+  },
   {
     id: 'shizuka',
     name: 'Shizuka Minamoto',
     shortName: 'Shizuka',
     jpName: '源 静香',
     height: 1.38,
-    position: [-3.6, layout.standY, 7.4],
-    rotationY: 0.12,
+    // Mixamo humanoid rig on Dekisugi's shared clips: the source `walk` travel (0.97 m) times
+    // her leg ratio (1.023). Estimated, like Suneo's — the ground clamp keeps the toe from
+    // resting still long enough to measure.
+    stride: 0.99,
+    position: [-0.3, layout.standY, 6.7],
+    rotationY: 0.1,
     color: '#F07EA8',
     bio: 'The kind, level-headed girl next door and the one person who never gives up on Nobita. Loves baths, sweet potatoes and the violin, though nobody survives her playing.',
-  },
-  {
-    id: 'doraemon',
-    name: 'Doraemon',
-    shortName: 'Doraemon',
-    jpName: 'ドラえもん',
-    height: 1.29,
-    position: [-1.8, layout.standY, 7.6],
-    rotationY: 0.05,
-    color: '#0A9DE8',
-    bio: 'A cat-shaped robot sent from the 22nd century by Nobita’s great-great-grandson to steer his ancestor toward a better future. Carries every gadget in his four-dimensional pocket, is terrified of mice, and would do anything for a dorayaki.',
   },
   {
     id: 'nobita',
@@ -47,32 +78,31 @@ export const characters: CharacterDef[] = [
     shortName: 'Nobita',
     jpName: '野比 のび太',
     height: 1.4,
-    position: [0, layout.standY, 7.7],
+    // Mixamo humanoid rig on Dekisugi's shared clips: the `walk` root travel the merge script
+    // strips on his rig (0.71 m) times his leg ratio (1.432). Estimated, like Jaian's.
+    stride: 1.02,
+    // Sitting on the ground in front of the gate. `sit` is a floor sit with the legs straight
+    // out, toes 0.67 m ahead of the origin, so he sits back near the wall to keep them on the
+    // sidewalk.
+    position: [1.7, layout.standY, 6.3],
     rotationY: 0,
+    rest: { clip: 'sit', offset: [0, 0, 0] },
     color: '#F5C21B',
     bio: 'Lazy, clumsy and hopeless at school, yet unbeatable at shooting and cat’s cradle. Nobita’s big heart is the reason Doraemon stays, and this is his house.',
   },
   {
-    id: 'jaian',
-    name: 'Takeshi "Gian" Goda',
-    shortName: 'Gian',
-    jpName: '剛田 武',
-    height: 1.57,
-    position: [1.9, layout.standY, 7.5],
-    rotationY: -0.08,
-    color: '#F0801E',
-    bio: 'The neighbourhood strongman and self-appointed singer. "What’s yours is mine, what’s mine is mine" — but when it truly matters, Gian is the friend who never runs.',
-  },
-  {
-    id: 'suneo',
-    name: 'Suneo Honekawa',
-    shortName: 'Suneo',
-    jpName: '骨川 スネ夫',
-    height: 1.35,
-    position: [3.7, layout.standY, 7.4],
-    rotationY: -0.15,
-    color: '#5CB85C',
-    bio: 'Rich, vain and quick to brag about whatever his family bought this week. Gian’s sidekick, Nobita’s rival, and secretly the most sensitive of the group.',
+    id: 'doraemon',
+    name: 'Doraemon',
+    shortName: 'Doraemon',
+    jpName: 'ドラえもん',
+    height: 1.29,
+    // Mixamo humanoid rig on Dekisugi's shared clips since 2026-09-13: the `walk` root travel
+    // the merge script strips on his rig (0.66 m) times his leg ratio (0.766). Estimated.
+    stride: 0.51,
+    position: [2.45, layout.standY, 6.6],
+    rotationY: -0.1,
+    color: '#0A9DE8',
+    bio: 'A cat-shaped robot sent from the 22nd century by Nobita’s great-great-grandson to steer his ancestor toward a better future. Carries every gadget in his four-dimensional pocket, is terrified of mice, and would do anything for a dorayaki.',
   },
   {
     id: 'dekisugi',
@@ -80,10 +110,33 @@ export const characters: CharacterDef[] = [
     shortName: 'Dekisugi',
     jpName: '出木杉 英才',
     height: 1.42,
-    position: [5.4, layout.standY, 7.4],
+    // Mixamo humanoid rig: the ground his `walk` clip covers per cycle, measured in Blender
+    // from the planted toe's speed on the posed rig (1.05 m left, 1.09 m right). Full-length
+    // stride, unlike the knee-less rigs.
+    stride: 1.07,
+    // By the right gate pier.
+    position: [3.4, layout.standY, 6.6],
     rotationY: -0.2,
     color: '#3FA08C',
     bio: 'Top of the class, kind to everyone, and effortlessly good at everything Nobita is not. The only rival Doraemon’s gadgets cannot beat, which is exactly why Nobita worries about him and Shizuka.',
+  },
+  {
+    id: 'suneo',
+    name: 'Suneo Honekawa',
+    shortName: 'Suneo',
+    jpName: '骨川 スネ夫',
+    // Dekisugi's height, not Suneo's canon 1.35 m (user decision 2026-09-13): at 1.35 m the
+    // sculpt's big head, hands and shoes read as a stunted body.
+    height: 1.42,
+    // Mixamo humanoid rig on Dekisugi's shared clips, at Dekisugi's stride (user decision
+    // 2026-09-13). The source `walk` travel times his leg ratio estimates 0.92 m, so if his feet
+    // slide in walk mode, that is the number to try.
+    stride: 1.07,
+    // At the foot of the wall right of the gate, past the mid-run pier at x 4.5.
+    position: [5.2, layout.standY, 6.2],
+    rotationY: -0.1,
+    color: '#5CB85C',
+    bio: 'Rich, vain and quick to brag about whatever his family bought this week. Gian’s sidekick, Nobita’s rival, and secretly the most sensitive of the group.',
   },
 ];
 

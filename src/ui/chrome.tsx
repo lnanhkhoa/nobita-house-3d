@@ -2,6 +2,7 @@ import { characters } from '../data/characters';
 import { timesOfDay } from '../data/time-of-day';
 import { usePerfStore } from '../state/perf-store';
 import { useAppStore } from '../state/store';
+import { MusicToggle } from './music-player';
 
 export function Title() {
   return (
@@ -18,6 +19,9 @@ export function ViewControls() {
   const resetView = useAppStore((s) => s.resetView);
   const timeOfDay = useAppStore((s) => s.timeOfDay);
   const setTimeOfDay = useAppStore((s) => s.setTimeOfDay);
+  // No Walk button for now (user decision 2026-09-13): walk mode has no way to get a sitter off
+  // its seat. The walk loop, `walkMode` in the store and their tests all stay; restoring the
+  // button brings the feature back.
   return (
     <div className="panel controls" role="toolbar" aria-label="View">
       <div className="controls__group">
@@ -47,6 +51,8 @@ export function ViewControls() {
           </label>
         ))}
       </fieldset>
+      <div className="controls__divider" aria-hidden="true" />
+      <MusicToggle />
     </div>
   );
 }
