@@ -2,12 +2,17 @@
 export const config = {
   camera: {
     /**
-     * Default hero framing: from over the sandlot's open edge across the road, a little above
-     * eye height, looking at Nobita's. No house stands behind it, so a straight dolly-out
-     * has nothing to collide with.
+     * Default hero framing: face-on to the group round the gate (characters span x 0.05–4.73,
+     * the wall sitters reach ~2.7 m), from the far sidewalk across the road, a little above
+     * eye height. The sandlot is behind it, so a straight dolly-out has nothing to collide with.
      */
-    position: [0, 5.2, 17.5] as const,
-    target: [0, 1.6, 0] as const,
+    position: [2.4, 2.5, 13.8] as const,
+    target: [2.4, 1.35, 6.4] as const,
+    /**
+     * Half the group's width, metres, round `target.x` (outstretched arms included). On a
+     * narrow screen the default view backs off along the same line until this still fits.
+     */
+    groupHalfWidth: 3.2,
     fov: 38,
     minDistance: 5,
     // Far enough to frame the whole block, sandlot to west lots, from any side. The fog

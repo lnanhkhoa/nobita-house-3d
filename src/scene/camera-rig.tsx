@@ -73,16 +73,16 @@ export function CameraRig() {
   useEffect(() => {
     const c = controls.current;
     if (!c) return;
-    const { position, target } = config.camera;
-    c.setLookAt(
-      position[0],
-      position[1],
-      position[2],
-      target[0],
-      target[1],
-      target[2],
-      resetToken > 0 && !prefersReducedMotion(),
-    );
+    const { position, target, fov, groupHalfWidth } = config.camera;
+    // Portrait phones see far less width than the desktop framing assumes: back off along the
+    // same line of sight until the whole group fits across the screen.
+    const aspect = window.innerWidth / Math.max(window.innerHeight, 1);
+    const eye = scratchEye.set(...position);
+    const look = scratchTarget.set(...target);
+    const fitDistance = groupHalfWidth / (Math.tan(((fov / 2) * Math.PI) / 180) * aspect);
+    const distance = Math.max(eye.distanceTo(look), fitDistance);
+    eye.sub(look).setLength(distance).add(look);
+    c.setLookAt(eye.x, eye.y, eye.z, look.x, look.y, look.z, resetToken > 0 && !prefersReducedMotion());
   }, [resetToken]);
 
   useEffect(() => {
